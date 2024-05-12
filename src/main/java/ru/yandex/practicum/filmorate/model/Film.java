@@ -8,6 +8,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Film.
@@ -21,7 +22,7 @@ public class Film {
     public static final LocalDate THE_OLDEST_MOVIE = LocalDate.of(1895, 12, 28);
     public static final int MAX_DESCRIPTION_LENGTH = 200;
 
-    private Long id;
+    private UUID id;
     @NotNull
     @NotBlank
     private String name;

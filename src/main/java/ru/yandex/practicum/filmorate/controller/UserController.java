@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -18,7 +19,7 @@ import java.util.Map;
 public class UserController {
 
     // временно хранится в памяти
-    private final Map<Long, User> users = new HashMap<>();
+    private final Map<UUID, User> users = new HashMap<>();
 
     @GetMapping
     public Collection<User> listAllUsers() {
@@ -74,12 +75,11 @@ public class UserController {
     }
 
     // вспомогательный метод для генерации id
-    private long getNextId() {
-        long currentMaxId = users.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+    private UUID getNextId() {
+        UUID uuid = UUID.randomUUID();
+        while (users.containsKey(uuid)) {
+            uuid = UUID.randomUUID();
+        }
+        return uuid;
     }
 }

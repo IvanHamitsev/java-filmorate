@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.model;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,21 +38,24 @@ class UserTest {
 
     @Test
     void testEquals() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+
         User user1 = new User();
-        user1.setId(1L);
+        user1.setId(id1);
         user1.setName("User");
         user1.setLogin("login");
         user1.setEmail("name@mail.ru");
 
         User user2 = new User();
-        user2.setId(1L);
+        user2.setId(id1);
         user2.setName("User2");
         user2.setLogin("login2");
         user2.setEmail("name2@mail.ru");
         user2.setBirthday(LocalDate.of(2002, 12, 01));
 
         User user3 = new User();
-        user3.setId(2L);
+        user3.setId(id2);
         user3.setName("User");
         user3.setLogin("login");
         user3.setEmail("name@mail.ru");
@@ -63,21 +67,24 @@ class UserTest {
 
     @Test
     void testHashCode() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+
         User user1 = new User();
-        user1.setId(1L);
+        user1.setId(id1);
         user1.setName("User");
         user1.setLogin("login");
         user1.setEmail("name@mail.ru");
 
         User user2 = new User();
-        user2.setId(1L);
+        user2.setId(id1);
         user2.setName("User2");
         user2.setLogin("login2");
         user2.setEmail("name2@mail.ru");
         user2.setBirthday(LocalDate.of(2002, 12, 01));
 
         User user3 = new User();
-        user3.setId(2L);
+        user3.setId(id2);
         user3.setName("User");
         user3.setLogin("login");
         user3.setEmail("name@mail.ru");

@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.model;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -82,22 +83,25 @@ class FilmTest {
 
     @Test
     void testEquals() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+
         Film film1 = new Film();
-        film1.setId(1L);
+        film1.setId(id1);
         film1.setName("Film");
         film1.setDescription("Description of film");
         film1.setReleaseDate(LocalDate.of(2001, 10, 1));
         film1.setDuration(90L);
 
         Film film2 = new Film();
-        film2.setId(1L);
+        film2.setId(id1);
         film2.setName("Another Film");
         film2.setDescription("Another film description");
         film2.setReleaseDate(LocalDate.of(2003, 11, 2));
         film2.setDuration(90L);
 
         Film film3 = new Film();
-        film3.setId(2L);
+        film3.setId(id2);
         film3.setName("Film");
         film3.setDescription("Description of film");
         film3.setReleaseDate(LocalDate.of(2001, 10, 1));
@@ -110,22 +114,25 @@ class FilmTest {
 
     @Test
     void testHashCode() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+
         Film film1 = new Film();
-        film1.setId(1L);
+        film1.setId(id1);
         film1.setName("Film");
         film1.setDescription("Description of film");
         film1.setReleaseDate(LocalDate.of(2001, 10, 1));
         film1.setDuration(90L);
 
         Film film2 = new Film();
-        film2.setId(1L);
+        film2.setId(id1);
         film2.setName("Another Film");
         film2.setDescription("Another film description");
         film2.setReleaseDate(LocalDate.of(2003, 11, 2));
         film2.setDuration(90L);
 
         Film film3 = new Film();
-        film3.setId(2L);
+        film3.setId(id2);
         film3.setName("Film");
         film3.setDescription("Description of film");
         film3.setReleaseDate(LocalDate.of(2001, 10, 1));

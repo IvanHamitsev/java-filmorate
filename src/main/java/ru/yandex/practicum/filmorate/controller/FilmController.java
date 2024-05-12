@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -18,7 +19,7 @@ import java.util.Map;
 public class FilmController {
 
     // временно фильмы хранятся прямо в контроллере
-    private final Map<Long, Film> films = new HashMap<>();
+    private final Map<UUID, Film> films = new HashMap<>();
 
     @GetMapping
     public Collection<Film> listAllFilms() {
@@ -70,12 +71,11 @@ public class FilmController {
 
 
     // вспомогательный метод для генерации id
-    private long getNextId() {
-        long currentMaxId = films.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+    private UUID getNextId() {
+        UUID uuid = UUID.randomUUID();
+        while (films.containsKey(uuid)) {
+            uuid = UUID.randomUUID();
+        }
+        return uuid;
     }
 }

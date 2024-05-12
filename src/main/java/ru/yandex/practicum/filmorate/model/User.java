@@ -9,13 +9,14 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Getter
 @Setter
 @ToString
 @EqualsAndHashCode(of = {"id"})
 public class User {
-    private Long id;
+    private UUID id;
     private String name;
     @NotNull
     @NotBlank
