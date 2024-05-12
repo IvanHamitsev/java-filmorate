@@ -8,7 +8,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDate;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Film.
@@ -16,13 +16,12 @@ import java.util.UUID;
 @Getter
 @Setter
 @ToString
-@EqualsAndHashCode(of = {"id"})
 public class Film {
     // ограничения на фильмы
     public static final LocalDate THE_OLDEST_MOVIE = LocalDate.of(1895, 12, 28);
     public static final int MAX_DESCRIPTION_LENGTH = 200;
 
-    private UUID id;
+    private AtomicLong id;
     @NotNull
     @NotBlank
     private String name;
@@ -30,6 +29,20 @@ public class Film {
     private LocalDate releaseDate;
     // в тестах для Postman использовано число, а не Duration, поэтому здесь также число
     private Long duration;
+
+    // реализация hashCode и equals в Lombok не умеет брать get()
+    @Override
+    public int hashCode() {
+        return Long.hashCode(id.get());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Film film = (Film) o;
+        return Long.hashCode(id.get()) == Long.hashCode(film.id.get());
+    }
 
     // вспомогательный метод для валидации описания фильма
     public boolean validateFilm() {

@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @RestController
@@ -19,7 +19,7 @@ import java.util.UUID;
 public class UserController {
 
     // временно хранится в памяти
-    private final Map<UUID, User> users = new HashMap<>();
+    private final Map<Long, User> users = new HashMap<>();
 
     @GetMapping
     public Collection<User> listAllUsers() {
@@ -38,9 +38,9 @@ public class UserController {
             log.info("У пользователя {} пустое имя заменено на логин", user);
         }
         // формируем id
-        user.setId(getNextId());
+        user.setId(new AtomicLong(getNextId()));
         // сохраняем нового пользователя
-        users.put(user.getId(), user);
+        users.put(user.getId().get(), user);
         log.info("Создан пользователь {}", user);
         return user;
     }
@@ -52,8 +52,8 @@ public class UserController {
             log.warn("Попытка обновления пользователя {} без id", newUser);
             throw new ValidationException("Id должен быть указан");
         }
-        if (users.containsKey(newUser.getId())) {
-            User oldUser = users.get(newUser.getId());
+        if (users.containsKey(newUser.getId().get())) {
+            User oldUser = users.get(newUser.getId().get());
             log.info("Пользователь {} обновляется до {}", oldUser, newUser);
             // Обновляем только заполненные поля
             if (newUser.getName() != null && !newUser.getName().isEmpty()) {
@@ -71,15 +71,16 @@ public class UserController {
             return oldUser;
         }
         log.error("Пользователь {} не найден", newUser);
-        throw new NotFoundException("Пользователь с id = " + newUser.getId() + " не найден");
+        throw new NotFoundException("Пользователь с id = " + newUser.getId().get() + " не найден");
     }
 
     // вспомогательный метод для генерации id
-    private UUID getNextId() {
-        UUID uuid = UUID.randomUUID();
-        while (users.containsKey(uuid)) {
-            uuid = UUID.randomUUID();
-        }
-        return uuid;
+    private Long getNextId() {
+        long currentMaxId = users.keySet()
+                .stream()
+                .mapToLong(id -> id)
+                .max()
+                .orElse(0);
+        return ++currentMaxId;
     }
 }

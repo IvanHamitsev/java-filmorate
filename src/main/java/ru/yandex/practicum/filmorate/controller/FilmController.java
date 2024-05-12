@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @RestController
@@ -19,7 +19,7 @@ import java.util.UUID;
 public class FilmController {
 
     // временно фильмы хранятся прямо в контроллере
-    private final Map<UUID, Film> films = new HashMap<>();
+    private final Map<Long, Film> films = new HashMap<>();
 
     @GetMapping
     public Collection<Film> listAllFilms() {
@@ -33,9 +33,9 @@ public class FilmController {
             throw new ValidationException("Поступившая заявка на создание фильма " + film.getName() + " некорректна");
         }
         // формируем id
-        film.setId(getNextId());
+        film.setId(new AtomicLong(getNextId()));
         // сохраняем нового пользователя
-        films.put(film.getId(), film);
+        films.put(film.getId().get(), film);
         log.info("Создан фильм {}", film);
         return film;
     }
@@ -47,8 +47,8 @@ public class FilmController {
             log.warn("Попытка обновления фильма {}, не указан id", newFilm);
             throw new ValidationException("Id должен быть указан");
         }
-        if (films.containsKey(newFilm.getId())) {
-            Film oldFilm = films.get(newFilm.getId());
+        if (films.containsKey(newFilm.getId().get())) {
+            Film oldFilm = films.get(newFilm.getId().get());
             log.info("Фильм {} обновляется до {}", oldFilm, newFilm);
             // Обновляем только заполненные поля
             if (newFilm.getName() != null && !newFilm.getName().isEmpty()) {
@@ -66,16 +66,17 @@ public class FilmController {
             return oldFilm;
         }
         log.error("Фильм {} не найден", newFilm);
-        throw new NotFoundException("Фильм с id = " + newFilm.getId() + " не найден");
+        throw new NotFoundException("Фильм с id = " + newFilm.getId().get() + " не найден");
     }
 
 
     // вспомогательный метод для генерации id
-    private UUID getNextId() {
-        UUID uuid = UUID.randomUUID();
-        while (films.containsKey(uuid)) {
-            uuid = UUID.randomUUID();
-        }
-        return uuid;
+    private Long getNextId() {
+        long currentMaxId = films.keySet()
+                .stream()
+                .mapToLong(id -> id)
+                .max()
+                .orElse(0);
+        return ++currentMaxId;
     }
 }

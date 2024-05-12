@@ -3,7 +3,7 @@ package ru.yandex.practicum.filmorate.model;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,8 +38,8 @@ class UserTest {
 
     @Test
     void testEquals() {
-        UUID id1 = UUID.randomUUID();
-        UUID id2 = UUID.randomUUID();
+        AtomicLong id1 = new AtomicLong(1L);
+        AtomicLong id2 = new AtomicLong(2L);
 
         User user1 = new User();
         user1.setId(id1);
@@ -67,8 +67,8 @@ class UserTest {
 
     @Test
     void testHashCode() {
-        UUID id1 = UUID.randomUUID();
-        UUID id2 = UUID.randomUUID();
+        AtomicLong id1 = new AtomicLong(1L);
+        AtomicLong id2 = new AtomicLong(2L);
 
         User user1 = new User();
         user1.setId(id1);
