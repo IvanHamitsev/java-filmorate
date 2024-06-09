@@ -7,6 +7,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -28,6 +29,7 @@ public class Film {
     private LocalDate releaseDate;
     // в тестах для Postman использовано число, а не Duration, поэтому здесь также число
     private Long duration;
+    private Set<Long> likesList;
 
     // реализация hashCode и equals в Lombok не умеет брать get()
     @Override
