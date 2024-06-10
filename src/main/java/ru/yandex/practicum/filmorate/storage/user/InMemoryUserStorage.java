@@ -67,17 +67,17 @@ public class InMemoryUserStorage implements UserStorage {
             }
             return oldUser;
         }
-        log.error("Пользователь {} не найден", newUser);
+        log.error("Пользователь [] не найден", newUser);
         throw new NotFoundException("Пользователь с id = " + newUser.getId().get() + " не найден");
     }
 
     @Override
-    public User deleteUser(User user) {
-        if ((user == null) || (user.getId() == null)) {
-            log.warn("Попытка удаления пользователя {} без id", user);
-            throw new ValidationException("Id должен быть указан");
+    public User deleteUser(Long userId) {
+        if (!users.containsKey(userId)) {
+            log.warn("Пользователь [] для удаления не найден", userId);
+            throw new ValidationException("Пользователь с Id = " + userId + " не найден");
         }
-        return users.remove(user.getId());
+        return users.remove(userId);
     }
 
     // вспомогательный метод для генерации id

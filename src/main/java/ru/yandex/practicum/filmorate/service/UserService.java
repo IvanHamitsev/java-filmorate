@@ -21,10 +21,13 @@ public class UserService {
         this.userStorage = userStorage;
     }
 
-    public boolean createFriendship(User user1, User user2) {
+    public void createFriendship(Long user1Id, Long user2Id) {
+        User user1 = userStorage.getUserById(user1Id);
+        User user2 = userStorage.getUserById(user2Id);
+
         if (user1 == null || user2 == null) {
-            log.warn("Попытка подружить пользователей [] []", user1, user2);
-            throw new ValidationException("Переданы пустые значения " + user1 + " " + user2);
+            log.warn("Пользователи не найдены [] []", user1, user2);
+            throw new ValidationException("Пользователи не найдены " + user1 + " " + user2);
         }
 
         if (user1.equals(user2)) {
@@ -37,13 +40,19 @@ public class UserService {
             throw new DataOperationException("Пользователи уже являются друзьями " + user1 + " " + user2);
         }
 
-        return user1.getFriends().add(user2.getId().get()) && user2.getFriends().add(user1.getId().get());
+        if (false == (user1.getFriends().add(user2.getId().get()) && user2.getFriends().add(user1.getId().get()))) {
+            log.warn("Подружить пользователей [] [] не удалось", user1, user2);
+            throw new DataOperationException("Пользователей " + user1 + " " + user2 + " подружить не удалось");
+        }
     }
 
-    public boolean destroyFriendship(User user1, User user2) {
+    public void destroyFriendship(Long user1Id, Long user2Id) {
+        User user1 = userStorage.getUserById(user1Id);
+        User user2 = userStorage.getUserById(user2Id);
+
         if (user1 == null || user2 == null) {
-            log.warn("Попытка раздружить пользователей [] []", user1, user2);
-            throw new ValidationException("Переданы пустые значения " + user1 + " " + user2);
+            log.warn("Пользователи не найдены [] []", user1, user2);
+            throw new ValidationException("Пользователи не найдены " + user1 + " " + user2);
         }
 
         if (user1.equals(user2)) {
@@ -51,10 +60,27 @@ public class UserService {
             throw new ValidationException("Переданы идентичные пользователи " + user1 + " " + user2);
         }
 
-        return user1.getFriends().remove(user2.getId().get()) && user2.getFriends().remove(user1.getId().get());
+        if (false == (user1.getFriends().remove(user2.getId().get()) && user2.getFriends().remove(user1.getId().get()))) {
+            log.warn("Раздружить пользователей [] [] не удалось", user1, user2);
+            throw new DataOperationException("Пользователей " + user1 + " " + user2 + " раздружить не удалось");
+        }
     }
 
-    public List<User> getListOfMutualFriends(User user1, User user2) {
+    public List<User> getListOfFriends(Long userId) {
+        if (userId == null || userStorage.getUserById(userId) == null) {
+            log.warn("Не найден пользователь с userId []", userId);
+            throw new ValidationException("Не найден пользователь с userId = " + userId);
+        }
+
+        return userStorage.getUserById(userId).getFriends().stream()
+                .map(userStorage::getUserById)
+                .toList();
+    }
+
+    public List<User> getListOfMutualFriends(Long user1Id, Long user2Id) {
+        User user1 = userStorage.getUserById(user1Id);
+        User user2 = userStorage.getUserById(user2Id);
+
         if (user1 == null || user2 == null) {
             log.warn("Переданы пустые пользователи [] []", user1, user2);
             throw new ValidationException("Переданы пустые значения " + user1 + " " + user2);
