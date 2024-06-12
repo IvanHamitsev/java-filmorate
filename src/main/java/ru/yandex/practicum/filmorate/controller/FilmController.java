@@ -9,6 +9,7 @@ import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.Collection;
+import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -29,9 +30,14 @@ public class FilmController {
         return filmStorage.listAllFilms();
     }
 
-    @GetMapping("/popular?count={count}")
-    public Collection<Film> listOfTopFilms(@RequestParam(defaultValue = "10") int count) {
-        return filmService.getTopFilms(count);
+    @GetMapping("/popular")
+    public Collection<Film> listOfTopFilms(@RequestParam(required = false) Optional<Integer> count) {
+        log.trace("Получен запрос на топ-{} фильмов", count);
+        if (count.isPresent()) {
+            return filmService.getTopFilms(count.get());
+        } else {
+            return filmService.getTopFilms(10);
+        }
     }
 
     @PostMapping
@@ -45,12 +51,17 @@ public class FilmController {
     }
 
     @PutMapping("/{id}/like/{userId}")
-    public void setLikeToFilm(@RequestParam(value = "id", required = false) Long filmId, @RequestParam(required = false) Long userId) {
+    public void setLikeToFilm(@PathVariable(value = "id", required = false) Long filmId, @PathVariable(required = false) Long userId) {
         filmService.setLike(filmId, userId);
     }
 
-    @DeleteMapping
-    public Film deleteFilm(@RequestBody Film film) {
-        return filmStorage.deleteFilm(film);
+    @DeleteMapping("/{filmId}")
+    public Film deleteFilm(@PathVariable(required = false) Long filmId) {
+        return filmStorage.deleteFilm(filmId);
+    }
+
+    @DeleteMapping("/{id}/like/{userId}")
+    public void delLikeToFilm(@PathVariable(value = "id", required = false) Long filmId, @PathVariable(required = false) Long userId) {
+        filmService.delLike(filmId, userId);
     }
 }

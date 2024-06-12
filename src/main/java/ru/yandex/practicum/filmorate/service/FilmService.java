@@ -4,9 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.DataOperationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
@@ -26,34 +26,37 @@ public class FilmService {
     }
 
     public void setLike(Long filmId, Long userId) {
-
         Film film = filmStorage.getFilmById(filmId);
-        User user = userStorage.getUserById(userId);
-        if (film.getLikesList().contains(user.getId().get())) {
+        if (film.getLikesList().contains(userId)) {
             // пользователь уже лайкал этот фильм
-            throw new DataOperationException("Пользователь " + user + " уже оценивал фильм " + film);
+            throw new DataOperationException("Пользователь " + userId + " уже оценивал фильм " + filmId);
         }
-
-        if (false == film.getLikesList().add(user.getId().get())) {
-            throw new DataOperationException("Пользователю " + user + " не удалось поставить лайк фильму " + film);
+        if (userStorage.getUserById(userId) == null) {
+            log.warn("Не найден пользователь {}, он не может поставить лайк фильму {}", userId, filmId);
+            throw new NotFoundException("Пользователь " + userId + " не найден");
+        }
+        if (false == film.getLikesList().add(userId)) {
+            throw new DataOperationException("Пользователю " + userId + " не удалось поставить лайк фильму " + filmId);
         }
     }
 
-    public boolean delLike(Film film, User user) {
-        if (!film.getLikesList().contains(user.getId().get())) {
+    public boolean delLike(Long filmId, Long userId) {
+        Film film = filmStorage.getFilmById(filmId);
+        if (!film.getLikesList().contains(userId)) {
             // нельзя убрать лайк, пользователь не оценивал этот фильм
-            throw new DataOperationException("Пользователь " + user + " не оценивал фильм " + film);
+            log.warn("Пользователь {} не оценивал фильм {}", userId, filmId);
+            throw new NotFoundException("Пользователь " + userId + " не оценивал фильм " + filmId);
         }
-        return film.getLikesList().remove(user.getId().get());
+        return film.getLikesList().remove(userId);
     }
 
-    public List<Film> getTopFilms(int count) {
+    public List<Film> getTopFilms(Integer count) {
         if (count <= 0) {
             log.warn("Некорректное значение числа топ фильмов {}", count);
             throw new ValidationException("Некорректное значение числа топ фильмов " + count);
         }
         return filmStorage.listAllFilms().stream()
-                .sorted((film1, film2) -> film1.getLikesList().size() - film2.getLikesList().size())
+                .sorted((film1, film2) -> film2.getLikesList().size() - film1.getLikesList().size())
                 .limit(count)
                 .toList();
     }

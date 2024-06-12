@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -24,8 +23,17 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
+    public User getUserById(Long userId) {
+        if (!users.containsKey(userId)) {
+            log.warn("Пользователь с Id {} не найден", userId);
+            throw new NotFoundException("Пользователь с Id = " + userId + " не найден");
+        }
+        return users.get(userId);
+    }
+
+    @Override
     public User createNewUser(User user) {
-        if (false == user.validateUser()) {
+        if (!user.validateUser()) {
             log.warn("Пользователь {} не прошёл валидацию", user);
             throw new ValidationException("Поступившая заявка на создание пользователя " + user.getLogin() + " некорректна");
         }
@@ -67,14 +75,14 @@ public class InMemoryUserStorage implements UserStorage {
             }
             return oldUser;
         }
-        log.error("Пользователь [] не найден", newUser);
+        log.error("Пользователь {} не найден", newUser);
         throw new NotFoundException("Пользователь с id = " + newUser.getId().get() + " не найден");
     }
 
     @Override
     public User deleteUser(Long userId) {
         if (!users.containsKey(userId)) {
-            log.warn("Пользователь [] для удаления не найден", userId);
+            log.warn("Пользователь {} для удаления не найден", userId);
             throw new ValidationException("Пользователь с Id = " + userId + " не найден");
         }
         return users.remove(userId);

@@ -26,22 +26,20 @@ public class UserService {
         User user2 = userStorage.getUserById(user2Id);
 
         if (user1 == null || user2 == null) {
-            log.warn("Пользователи не найдены [] []", user1, user2);
-            throw new ValidationException("Пользователи не найдены " + user1 + " " + user2);
+            log.warn("Пользователи не найдены {} {}", user1Id, user2Id);
+            throw new ValidationException("Пользователи не найдены " + user1Id + " " + user2Id);
         }
 
         if (user1.equals(user2)) {
-            log.warn("Попытка подружить пользователя с самим собой [] []", user1, user2);
-            throw new ValidationException("Переданы идентичные пользователи " + user1 + " " + user2);
+            log.warn("Попытка подружить пользователя с самим собой {} {}", user1Id, user2Id);
+            throw new ValidationException("Переданы идентичные пользователи " + user1Id + " " + user2Id);
         }
 
-        if (user1.getFriends().contains(user2.getId().get()) || user2.getFriends().contains(user1.getId().get())) {
-            log.warn("Попытка подружить друзей [] []", user1, user2);
-            throw new DataOperationException("Пользователи уже являются друзьями " + user1 + " " + user2);
-        }
-
-        if (false == (user1.getFriends().add(user2.getId().get()) && user2.getFriends().add(user1.getId().get()))) {
-            log.warn("Подружить пользователей [] [] не удалось", user1, user2);
+        if (user1.getFriends().contains(user2Id) || user2.getFriends().contains(user1Id)) {
+            log.warn("Попытка подружить друзей {} {}", user1, user2);
+            //throw new DataOperationException("Пользователи уже являются друзьями " + user1 + " " + user2);
+        } else if (false == (user1.getFriends().add(user2.getId().get()) && user2.getFriends().add(user1.getId().get()))) {
+            log.warn("Подружить пользователей {} {} не удалось", user1, user2);
             throw new DataOperationException("Пользователей " + user1 + " " + user2 + " подружить не удалось");
         }
     }
@@ -61,8 +59,8 @@ public class UserService {
         }
 
         if (false == (user1.getFriends().remove(user2.getId().get()) && user2.getFriends().remove(user1.getId().get()))) {
-            log.warn("Раздружить пользователей [] [] не удалось", user1, user2);
-            throw new DataOperationException("Пользователей " + user1 + " " + user2 + " раздружить не удалось");
+            log.warn("Пользователи [] [] не являлись друзьями", user1, user2);
+            //throw new DataOperationException("Пользователей " + user1 + " " + user2 + " раздружить не удалось");
         }
     }
 

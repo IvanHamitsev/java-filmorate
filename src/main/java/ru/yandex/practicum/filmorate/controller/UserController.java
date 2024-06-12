@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -31,18 +30,19 @@ public class UserController {
     }
 
     @GetMapping("/{id}/friends")
-    public Collection<User> listUserFriends(@RequestParam(value = "id", required = false) Long userId) {
+    public Collection<User> listUserFriends(@PathVariable(value = "id", required = false) Long userId) {
         // проверки на null и существование пользователя внутри service
         return userService.getListOfFriends(userId);
     }
 
     @GetMapping("/{userId}/friends/common/{otherId}")
-    public Collection<User> listOfMutualFriends(@RequestParam(required = false) Long userId, @RequestParam(required = false) Long otherId) {
+    public Collection<User> listOfMutualFriends(@PathVariable(required = false) Long userId, @PathVariable(required = false) Long otherId) {
         return userService.getListOfMutualFriends(userId, otherId);
     }
 
     @PostMapping
     public User createNewUser(@Valid @RequestBody User user) {
+        log.trace("Запрос создания {} ", user);
         return userStorage.createNewUser(user);
     }
 
@@ -52,7 +52,8 @@ public class UserController {
     }
 
     @PutMapping("/{id}/friends/{friendId}")
-    public void addFriend(@RequestParam(value = "id", required = false) Long userId, @RequestParam(required = false) Long friendId) {
+    public void addFriend(@PathVariable(value = "id", required = false) Long userId, @PathVariable(required = false) Long friendId) {
+        log.trace("Запрос дружбы {} и {}", userId, friendId);
         userService.createFriendship(userId, friendId);
     }
 
@@ -62,7 +63,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
-    public void destroyFriendship(@RequestParam(value = "id", required = false) Long userId, @RequestParam(required = false) Long friendId) {
+    public void destroyFriendship(@PathVariable(value = "id", required = false) Long userId, @PathVariable(required = false) Long friendId) {
         userService.destroyFriendship(userId, friendId);
     }
 }

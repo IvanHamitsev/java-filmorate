@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -25,8 +24,17 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
+    public Film getFilmById(Long filmId) {
+        if (!films.containsKey(filmId)) {
+            log.warn("Фильм c Id {} не найден", filmId);
+            throw new NotFoundException("Не найден фильм с Id " + filmId);
+        }
+        return films.get(filmId);
+    }
+
+    @Override
     public Film createNewFilm(Film film) {
-        if (false == film.validateFilm()) {
+        if (!film.validateFilm()) {
             log.warn("Фильм {} не прошёл валидацию", film);
             throw new ValidationException("Поступившая заявка на создание фильма " + film.getName() + " некорректна");
         }
@@ -68,12 +76,12 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public Film deleteFilm(Film film) {
-        if ((film == null) || (film.getId() == null)) {
-            log.warn("Попытка удаления фильма {}, не указан id", film);
-            throw new ValidationException("Id фильма должен быть указан");
+    public Film deleteFilm(Long filmId) {
+        if (!films.containsKey(filmId)) {
+            log.warn("Попытка удаления фильма {}, фильм не найден", filmId);
+            throw new ValidationException("Не найден фильм с Id " + filmId);
         }
-        return films.remove(film.getId());
+        return films.remove(filmId);
     }
 
     // вспомогательный метод для генерации id
