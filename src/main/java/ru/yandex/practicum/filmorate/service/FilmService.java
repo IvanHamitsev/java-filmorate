@@ -12,6 +12,9 @@ import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.List;
 
+import static ru.yandex.practicum.filmorate.model.Film.MAX_DESCRIPTION_LENGTH;
+import static ru.yandex.practicum.filmorate.model.Film.THE_OLDEST_MOVIE;
+
 @Slf4j
 @Service
 public class FilmService {
@@ -25,7 +28,16 @@ public class FilmService {
         this.userStorage = userStorage;
     }
 
+    public boolean filmExists(Long filmId) {
+        return filmStorage.getFilmById(filmId) != null;
+    }
+
     public void setLike(Long filmId, Long userId) {
+        if (!filmExists(filmId)) {
+            log.warn("Не найден фильм {}, нельзя поставить лайк", filmId);
+            throw new NotFoundException("Фильм " + filmId + " не найден");
+        }
+
         Film film = filmStorage.getFilmById(filmId);
         if (film.getLikesList().contains(userId)) {
             // пользователь уже лайкал этот фильм
@@ -41,6 +53,11 @@ public class FilmService {
     }
 
     public boolean delLike(Long filmId, Long userId) {
+        if (!filmExists(filmId)) {
+            log.warn("Не найден фильм {}, нельзя удалить лайк", filmId);
+            throw new NotFoundException("Фильм " + filmId + " не найден");
+        }
+
         Film film = filmStorage.getFilmById(filmId);
         if (!film.getLikesList().contains(userId)) {
             // нельзя убрать лайк, пользователь не оценивал этот фильм
@@ -59,5 +76,16 @@ public class FilmService {
                 .sorted((film1, film2) -> film2.getLikesList().size() - film1.getLikesList().size())
                 .limit(count)
                 .toList();
+    }
+
+    // метод для валидации описания фильма
+    public static boolean validateFilm(Film film) {
+        if (film == null || film.getName() == null || film.getName().isEmpty() ||
+                film.getReleaseDate().isBefore(THE_OLDEST_MOVIE) ||
+                film.getDescription().length() > MAX_DESCRIPTION_LENGTH ||
+                film.getDuration() <= 0) {
+            return false;
+        }
+        return true;
     }
 }

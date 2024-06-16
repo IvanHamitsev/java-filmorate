@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.model;
 
 import org.junit.jupiter.api.Test;
+import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicLong;
@@ -16,7 +17,7 @@ class UserTest {
         user.setLogin("login");
         user.setEmail("name@mail.ru");
         user.setBirthday(LocalDate.of(2001, 12, 01));
-        assertTrue(user.validateUser(), "The user failed validation");
+        assertTrue(UserService.validateUser(user), "The user failed validation");
     }
 
     @Test
@@ -26,14 +27,14 @@ class UserTest {
         user.setLogin("user login");
         user.setEmail("name@mail.ru");
         user.setBirthday(LocalDate.of(2001, 12, 01));
-        assertFalse(user.validateUser(), "The user with a space in the login has passed validation");
+        assertFalse(UserService.validateUser(user), "The user with a space in the login has passed validation");
 
         user = new User();
         user.setName("User");
         user.setLogin("user login");
         user.setEmail("name@mail.ru");
         user.setBirthday(LocalDate.now().plusDays(1));
-        assertFalse(user.validateUser(), "Tha user with an incorrect birthday has passed validation");
+        assertFalse(UserService.validateUser(user), "Tha user with an incorrect birthday has passed validation");
     }
 
     @Test

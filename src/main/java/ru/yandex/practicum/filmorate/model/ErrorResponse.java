@@ -1,5 +1,8 @@
 package ru.yandex.practicum.filmorate.model;
 
+import lombok.ToString;
+
+@ToString
 public class ErrorResponse {
     private final String error;
     private final String description;

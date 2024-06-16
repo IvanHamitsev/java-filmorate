@@ -5,12 +5,17 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static ru.yandex.practicum.filmorate.model.Film.MAX_DESCRIPTION_LENGTH;
+import static ru.yandex.practicum.filmorate.model.Film.THE_OLDEST_MOVIE;
 
 @Slf4j
 @Component
@@ -24,8 +29,13 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
+    public boolean filmExists(Long filmId) {
+        return films.containsKey(filmId);
+    }
+
+    @Override
     public Film getFilmById(Long filmId) {
-        if (!films.containsKey(filmId)) {
+        if (!filmExists(filmId)) {
             log.warn("Фильм c Id {} не найден", filmId);
             throw new NotFoundException("Не найден фильм с Id " + filmId);
         }
@@ -34,7 +44,7 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film createNewFilm(Film film) {
-        if (!film.validateFilm()) {
+        if (!FilmService.validateFilm(film)) {
             log.warn("Фильм {} не прошёл валидацию", film);
             throw new ValidationException("Поступившая заявка на создание фильма " + film.getName() + " некорректна");
         }
@@ -47,14 +57,19 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public Film updateFilm(Film newFilm) {
+    public Optional<Film> updateFilm(Film newFilm) {
+        if (newFilm == null) {
+            log.warn("Передан пустой объект Film");
+            throw new NotFoundException("Фильм не задан");
+        }
         // проверяем что указан id
-        if (newFilm.getId() == null) {
+        if (null == newFilm.getId()) {
             log.warn("Попытка обновления фильма {}, не указан id", newFilm);
             throw new ValidationException("Id должен быть указан");
         }
-        if (films.containsKey(newFilm.getId().get())) {
-            Film oldFilm = films.get(newFilm.getId().get());
+        Long newFilmId = newFilm.getId().get();
+        if (films.containsKey(newFilmId)) {
+            Film oldFilm = films.get(newFilmId);
             log.info("Фильм {} обновляется до {}", oldFilm, newFilm);
             // Обновляем только заполненные поля
             if (newFilm.getName() != null && !newFilm.getName().isEmpty()) {
@@ -69,19 +84,19 @@ public class InMemoryFilmStorage implements FilmStorage {
             if (newFilm.getReleaseDate() != null && newFilm.getReleaseDate().isBefore(LocalDate.now())) {
                 oldFilm.setReleaseDate(newFilm.getReleaseDate());
             }
-            return oldFilm;
+            return Optional.of(oldFilm);
         }
         log.error("Фильм {} не найден", newFilm);
-        throw new NotFoundException("Фильм с id = " + newFilm.getId().get() + " не найден");
+        throw new NotFoundException("Фильм с id = " + newFilmId + " не найден");
     }
 
     @Override
-    public Film deleteFilm(Long filmId) {
-        if (!films.containsKey(filmId)) {
+    public boolean deleteFilm(Long filmId) {
+        if (filmExists(filmId)) {
             log.warn("Попытка удаления фильма {}, фильм не найден", filmId);
             throw new ValidationException("Не найден фильм с Id " + filmId);
         }
-        return films.remove(filmId);
+        return films.remove(filmId) != null;
     }
 
     // вспомогательный метод для генерации id

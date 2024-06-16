@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.controller;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
@@ -41,6 +42,7 @@ public class UserController {
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public User createNewUser(@Valid @RequestBody User user) {
         log.trace("Запрос создания {} ", user);
         return userStorage.createNewUser(user);
@@ -48,7 +50,7 @@ public class UserController {
 
     @PutMapping
     public User updateUser(@RequestBody User newUser) {
-        return userStorage.updateUser(newUser);
+        return userStorage.updateUser(newUser).get();
     }
 
     @PutMapping("/{id}/friends/{friendId}")
@@ -58,7 +60,7 @@ public class UserController {
     }
 
     @DeleteMapping
-    public User deleteUser(@RequestBody User user) {
+    public boolean deleteUser(@RequestBody User user) {
         return userStorage.deleteUser(user.getId().get());
     }
 

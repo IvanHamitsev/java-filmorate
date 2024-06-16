@@ -5,11 +5,13 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
@@ -33,7 +35,7 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public User createNewUser(User user) {
-        if (!user.validateUser()) {
+        if (!UserService.validateUser(user)) {
             log.warn("Пользователь {} не прошёл валидацию", user);
             throw new ValidationException("Поступившая заявка на создание пользователя " + user.getLogin() + " некорректна");
         }
@@ -51,14 +53,19 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public User updateUser(User newUser) {
+    public Optional<User> updateUser(User newUser) {
+        if (newUser == null) {
+            log.warn("Попытка обновления пустого пользователя");
+            throw new NotFoundException("Передан пустой пользователь");
+        }
         // проверяем что указан id
-        if (newUser.getId() == null) {
+        if (null == newUser.getId()) {
             log.warn("Попытка обновления пользователя {} без id", newUser);
             throw new ValidationException("Id должен быть указан");
         }
-        if (users.containsKey(newUser.getId().get())) {
-            User oldUser = users.get(newUser.getId().get());
+        Long newUserId = newUser.getId().get();
+        if (users.containsKey(newUserId)) {
+            User oldUser = users.get(newUserId);
             log.info("Пользователь {} обновляется до {}", oldUser, newUser);
             // Обновляем только заполненные поля
             if (newUser.getName() != null && !newUser.getName().isEmpty()) {
@@ -73,19 +80,19 @@ public class InMemoryUserStorage implements UserStorage {
             if (newUser.getBirthday() != null && newUser.getBirthday().isBefore(LocalDate.now())) {
                 oldUser.setBirthday(newUser.getBirthday());
             }
-            return oldUser;
+            return Optional.of(oldUser);
         }
         log.error("Пользователь {} не найден", newUser);
-        throw new NotFoundException("Пользователь с id = " + newUser.getId().get() + " не найден");
+        throw new NotFoundException("Пользователь с id = " + newUserId + " не найден");
     }
 
     @Override
-    public User deleteUser(Long userId) {
+    public boolean deleteUser(Long userId) {
         if (!users.containsKey(userId)) {
             log.warn("Пользователь {} для удаления не найден", userId);
             throw new ValidationException("Пользователь с Id = " + userId + " не найден");
         }
-        return users.remove(userId);
+        return users.remove(userId) != null;
     }
 
     // вспомогательный метод для генерации id

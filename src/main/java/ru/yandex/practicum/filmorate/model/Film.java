@@ -46,14 +46,5 @@ public class Film {
         return Long.hashCode(id.get()) == Long.hashCode(film.id.get());
     }
 
-    // вспомогательный метод для валидации описания фильма
-    public boolean validateFilm() {
-        if (this.getName() == null || this.getName().isEmpty() ||
-                this.getReleaseDate().isBefore(THE_OLDEST_MOVIE) ||
-                this.getDescription().length() > MAX_DESCRIPTION_LENGTH ||
-                this.getDuration() <= 0) {
-            return false;
-        }
-        return true;
-    }
+
 }
