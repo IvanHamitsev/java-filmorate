@@ -14,9 +14,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static ru.yandex.practicum.filmorate.model.Film.MAX_DESCRIPTION_LENGTH;
-import static ru.yandex.practicum.filmorate.model.Film.THE_OLDEST_MOVIE;
-
 @Slf4j
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
