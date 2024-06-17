@@ -7,6 +7,8 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -28,6 +30,7 @@ public class Film {
     private LocalDate releaseDate;
     // в тестах для Postman использовано число, а не Duration, поэтому здесь также число
     private Long duration;
+    private Set<Long> likesList = new HashSet<>();
 
     // реализация hashCode и equals в Lombok не умеет брать get()
     @Override
@@ -43,14 +46,5 @@ public class Film {
         return Long.hashCode(id.get()) == Long.hashCode(film.id.get());
     }
 
-    // вспомогательный метод для валидации описания фильма
-    public boolean validateFilm() {
-        if (this.getName() == null || this.getName().isEmpty() ||
-                this.getReleaseDate().isBefore(THE_OLDEST_MOVIE) ||
-                this.getDescription().length() > MAX_DESCRIPTION_LENGTH ||
-                this.getDuration() <= 0) {
-            return false;
-        }
-        return true;
-    }
+
 }

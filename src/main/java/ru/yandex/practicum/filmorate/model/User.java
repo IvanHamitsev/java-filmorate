@@ -8,6 +8,8 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Getter
@@ -22,6 +24,7 @@ public class User {
     @Email
     private String email;
     private LocalDate birthday;
+    private Set<Long> friends = new HashSet<>();
 
     // реализация hashCode и equals в Lombok не умеет брать get()
     @Override
@@ -37,13 +40,5 @@ public class User {
         return Long.hashCode(id.get()) == Long.hashCode(user.id.get());
     }
 
-    // вспомогательный метод для валидации параметров пользователя
-    public boolean validateUser() {
-        if (this.getLogin() == null || this.getLogin().contains(" ") ||
-                // проверка электронной почты возложена на @Email
-                this.getBirthday().isAfter(LocalDate.now())) {
-            return false;
-        }
-        return true;
-    }
+
 }
