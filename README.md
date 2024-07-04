@@ -55,18 +55,22 @@ LIMIT 10
 
 - Полулучение списка 10 фильмов с наибольшим число лайков, которые понравились пользователю `user_id = 1`
 ```sql
-SELECT film_name,
-       likes
-FROM (SELECT f.name AS film_name,
-             f.film_id AS id,
-             COUNT(DISTINCT l.user_id) AS likes
-             FROM Films f
-             INNER JOIN Like l ON l.film_id = f.film_id
-             GROUP BY f.id_film)
-WHERE id IN (SELECT film_id
-             FROM Films f
-             INNER JOIN Like l ON l.film_id = f.film_id
-             WHERE l.user_id = 1)
+SELECT f.film_name,
+       f.likes
+FROM (
+    SELECT f.name AS film_name,
+           f.film_id AS id,
+           COUNT(DISTINCT l.user_id) AS likes
+    FROM Films f
+    INNER JOIN Like l ON l.film_id = f.film_id
+    GROUP BY f.id_film
+) AS f
+WHERE id IN (
+    SELECT film_id
+    FROM Films f
+    INNER JOIN Like l ON l.film_id = f.film_id
+    WHERE l.user_id = 1
+)
 ORDER BY likes DESC
-LIMIT 10
+LIMIT 10;
 ```
