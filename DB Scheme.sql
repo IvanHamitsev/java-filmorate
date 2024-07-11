@@ -36,7 +36,7 @@ CREATE TABLE users (
 CREATE TABLE friendship (
   source_id integer REFERENCES users (id) ON DELETE CASCADE NOT NULL,
   destination_id integer REFERENCES users (id) ON DELETE CASCADE NOT NULL,
-  PRIMARY KEY (user1_id, user2_id)
+  PRIMARY KEY (source_id, destination_id)
 );
 
 CREATE TABLE likes (
