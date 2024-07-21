@@ -9,6 +9,7 @@ import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -17,14 +18,26 @@ import java.util.concurrent.atomic.AtomicLong;
 @ToString
 public class User {
     private AtomicLong id;
-    private String name;
+    private String firstName;
+    private String lastName;
     @NotNull
     @NotBlank
     private String login;
     @Email
     private String email;
     private LocalDate birthday;
-    private Set<Long> friends = new HashSet<>();
+    private Set<User> allFriends = new HashSet<>();
+    private Set<User> realFriends = new HashSet<>();
+
+    public void setAllFriendsList(List<User> inp) {
+        allFriends.clear();
+        allFriends.addAll(inp);
+    }
+
+    public void setRealFriendsList(List<User> inp) {
+        realFriends.clear();
+        realFriends.addAll(inp);
+    }
 
     // реализация hashCode и equals в Lombok не умеет брать get()
     @Override

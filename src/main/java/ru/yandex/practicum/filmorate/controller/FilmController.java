@@ -1,13 +1,12 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
-import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -15,20 +14,14 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequestMapping("/films")
+@RequiredArgsConstructor
 public class FilmController {
 
-    private final FilmStorage filmStorage;
     private final FilmService filmService;
-
-    @Autowired
-    public FilmController(FilmStorage filmStorage, FilmService filmService) {
-        this.filmStorage = filmStorage;
-        this.filmService = filmService;
-    }
 
     @GetMapping
     public Collection<Film> listAllFilms() {
-        return filmStorage.listAllFilms();
+        return filmService.listAllFilms();
     }
 
     @GetMapping("/popular")
@@ -44,12 +37,12 @@ public class FilmController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Film createNewFilm(@Valid @RequestBody Film film) {
-        return filmStorage.createNewFilm(film);
+        return filmService.createNewFilm(film);
     }
 
     @PutMapping
     public Film updateFilm(@RequestBody Film newFilm) {
-        return filmStorage.updateFilm(newFilm).get();
+        return filmService.updateFilm(newFilm);
     }
 
     @PutMapping("/{id}/like/{userId}")
@@ -58,8 +51,8 @@ public class FilmController {
     }
 
     @DeleteMapping("/{filmId}")
-    public boolean deleteFilm(@PathVariable Long filmId) {
-        return filmStorage.deleteFilm(filmId);
+    public void deleteFilm(@PathVariable Long filmId) {
+        filmService.deleteFilm(filmId);
     }
 
     @DeleteMapping("/{id}/like/{userId}")

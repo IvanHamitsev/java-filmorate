@@ -1,70 +1,50 @@
 package ru.yandex.practicum.filmorate.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.DataOperationException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.dal.*;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.Rating;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static ru.yandex.practicum.filmorate.model.Film.MAX_DESCRIPTION_LENGTH;
 import static ru.yandex.practicum.filmorate.model.Film.THE_OLDEST_MOVIE;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class FilmService {
-
+    // репозитории
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
+    private final LikesStorage likesStorage;
+    private final GenreStorage genreStorage;
+    private final RatingStorage ratingStorage;
 
-    @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
-        this.filmStorage = filmStorage;
-        this.userStorage = userStorage;
-    }
-
-    public boolean filmExists(Long filmId) {
-        return filmStorage.getFilmById(filmId) != null;
+    public List<Film> listAllFilms() {
+        List<Film> films = filmStorage.listAllFilms();
+        for (Film film : films) {
+            List<Genre> genreList = genreStorage.getFilmGenres(film.getId().get());
+            Optional<Rating> rating = ratingStorage.getRating(film.getRatingId());
+            if (rating.isPresent()) {
+                film.setRating(rating.get());
+            }
+        }
+        return films;
     }
 
     public void setLike(Long filmId, Long userId) {
-        if (!filmExists(filmId)) {
-            log.warn("Не найден фильм {}, нельзя поставить лайк", filmId);
-            throw new NotFoundException("Фильм " + filmId + " не найден");
-        }
-
-        Film film = filmStorage.getFilmById(filmId);
-        if (film.getLikesList().contains(userId)) {
-            // пользователь уже лайкал этот фильм
-            throw new DataOperationException("Пользователь " + userId + " уже оценивал фильм " + filmId);
-        }
-        if (userStorage.getUserById(userId) == null) {
-            log.warn("Не найден пользователь {}, он не может поставить лайк фильму {}", userId, filmId);
-            throw new NotFoundException("Пользователь " + userId + " не найден");
-        }
-        if (false == film.getLikesList().add(userId)) {
-            throw new DataOperationException("Пользователю " + userId + " не удалось поставить лайк фильму " + filmId);
-        }
+        likesStorage.setLike(filmId, userId);
     }
 
-    public boolean delLike(Long filmId, Long userId) {
-        if (!filmExists(filmId)) {
-            log.warn("Не найден фильм {}, нельзя удалить лайк", filmId);
-            throw new NotFoundException("Фильм " + filmId + " не найден");
-        }
-
-        Film film = filmStorage.getFilmById(filmId);
-        if (!film.getLikesList().contains(userId)) {
-            // нельзя убрать лайк, пользователь не оценивал этот фильм
-            log.warn("Пользователь {} не оценивал фильм {}", userId, filmId);
-            throw new NotFoundException("Пользователь " + userId + " не оценивал фильм " + filmId);
-        }
-        return film.getLikesList().remove(userId);
+    public void delLike(Long filmId, Long userId) {
+        likesStorage.delLike(filmId, userId);
     }
 
     public List<Film> getTopFilms(Integer count) {
@@ -72,18 +52,44 @@ public class FilmService {
             log.warn("Некорректное значение числа топ фильмов {}", count);
             throw new ValidationException("Некорректное значение числа топ фильмов " + count);
         }
-        return filmStorage.listAllFilms().stream()
-                .sorted((film1, film2) -> film2.getLikesList().size() - film1.getLikesList().size())
-                .limit(count)
-                .toList();
+        return likesStorage.getTopFilms(count);
+    }
+
+    public List<Film> getTopFilmsInGenre(Integer count, String genreName) {
+        if (count <= 0) {
+            log.warn("Некорректное значение числа топ фильмов {}", count);
+            throw new ValidationException("Некорректное значение числа топ фильмов " + count);
+        }
+        if ((genreName == null) || (genreName.isEmpty())) {
+            log.warn("Задано пустое название жанра");
+            throw new ValidationException("Некорректное название жанра " + genreName);
+        }
+        return likesStorage.getTopFilmsInGenre(count, genreName);
+    }
+
+    public Film updateFilm(Film newFilm) {
+        if (validateFilm(newFilm)) {
+            Film oldFilm = filmStorage.getFilmById(newFilm.getId().get())
+                    .orElseThrow(() -> new ValidationException("Такой фильм не найден"));
+            Optional<Rating> rating = ratingStorage.getRating(newFilm.getRatingId());
+
+            // Достать из переданного фильма перечень id жанров
+            List<AtomicLong> genresIds = newFilm.getGenresList().stream().map(Genre::getId).toList();
+            List<Genre> genres = genreStorage.getGenres(genresIds);
+            // рейтинг не обязательный параметр
+            if (rating.isPresent()) {
+                oldFilm.setRating(rating.get());
+            }
+
+        } else {
+            log.warn("Переданный на обновление фильм не прошёл валидацию ", newFilm);
+            throw new ValidationException("Некорректно заполнены свойства фильма");
+        }
     }
 
     // метод для валидации описания фильма
     public static boolean validateFilm(Film film) {
-        if (film == null || film.getName() == null || film.getName().isEmpty() ||
-                film.getReleaseDate().isBefore(THE_OLDEST_MOVIE) ||
-                film.getDescription().length() > MAX_DESCRIPTION_LENGTH ||
-                film.getDuration() <= 0) {
+        if (film == null || film.getName() == null || film.getName().isEmpty() || film.getReleaseDate().isBefore(THE_OLDEST_MOVIE) || film.getDescription().length() > MAX_DESCRIPTION_LENGTH || film.getDuration() <= 0) {
             return false;
         }
         return true;

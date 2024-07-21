@@ -8,12 +8,10 @@ import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Film.
- */
 @Getter
 @Setter
 @ToString
@@ -30,7 +28,23 @@ public class Film {
     private LocalDate releaseDate;
     // в тестах для Postman использовано число, а не Duration, поэтому здесь также число
     private Long duration;
-    private Set<Long> likesList = new HashSet<>();
+    private Rating rating;
+    private Set<User> likesList = new HashSet<>();
+    private Set<Genre> genresList = new HashSet<>();
+
+    public Long getRatingId() {
+        if (rating == null) {
+            return null;
+        } else {
+            return rating.getId().get();
+        }
+    }
+
+    // с такой функцией не справится Lombok, он сделает аргумент Set
+    public void setGenresList(List<Genre> inp) {
+        genresList.clear();
+        genresList.addAll(inp);
+    }
 
     // реализация hashCode и equals в Lombok не умеет брать get()
     @Override

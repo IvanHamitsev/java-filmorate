@@ -1,30 +1,28 @@
 package ru.yandex.practicum.filmorate.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.DataOperationException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+import ru.yandex.practicum.filmorate.dal.UserStorage;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserStorage userStorage;
 
-    @Autowired
-    public UserService(UserStorage userStorage) {
-        this.userStorage = userStorage;
-    }
-
     public void createFriendship(Long user1Id, Long user2Id) {
         User user1 = userStorage.getUserById(user1Id);
         User user2 = userStorage.getUserById(user2Id);
+
+        userStorage.friendshipRequest(user1Id, user2Id);
 
         if (user1 == null || user2 == null) {
             log.warn("Пользователи не найдены {} {}", user1Id, user2Id);
