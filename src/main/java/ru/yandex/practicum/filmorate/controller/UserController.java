@@ -36,6 +36,11 @@ public class UserController {
         return userService.getListOfFriends(userId);
     }
 
+    @GetMapping("/{id}/real_friends")
+    public Collection<User> listUserRealFriends(@PathVariable(value = "id", required = false) Long userId) {
+        return userService.getListOfRealFriends(userId);
+    }
+
     @GetMapping("/{userId}/friends/common/{otherId}")
     public Collection<User> listOfMutualFriends(@PathVariable(required = false) Long userId, @PathVariable(required = false) Long otherId) {
         return userService.getListOfMutualFriends(userId, otherId);

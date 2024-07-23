@@ -25,6 +25,7 @@ public class JdbcGenreRepository implements GenreStorage {
 
     @Override
     public List<Genre> getFilmGenres(Long filmId) {
+        log.trace("Поиск жанра для фильма {}", filmId);
         return base.findMany(GET_FILM_GENRES, filmId);
     }
 
@@ -36,7 +37,7 @@ public class JdbcGenreRepository implements GenreStorage {
         }
         request += ")";
         request = request.replaceFirst("\\(,", "(");
-
+        log.trace(request);
         return base.findMany(request);
     }
 
@@ -45,6 +46,12 @@ public class JdbcGenreRepository implements GenreStorage {
         if (0 >= base.insert(SET_FILM_GENRE, filmId, genreId)) {
             throw new DataOperationException("Не удалось поставить лайк фильму");
         }
+    }
+
+    @Override
+    public void setFilmGenres(Long filmId, List<AtomicLong> genreIds) {
+        List<Object[]> listIds = genreIds.stream().map((genreId) -> new Object[]{filmId, genreId.get()}).toList();
+        base.batchInsert(SET_FILM_GENRE, listIds);
     }
 
     @Override

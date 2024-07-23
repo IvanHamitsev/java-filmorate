@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.dal.*;
+import ru.yandex.practicum.filmorate.exception.DataOperationException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
@@ -22,7 +23,6 @@ import static ru.yandex.practicum.filmorate.model.Film.THE_OLDEST_MOVIE;
 public class FilmService {
     // репозитории
     private final FilmStorage filmStorage;
-    private final UserStorage userStorage;
     private final LikesStorage likesStorage;
     private final GenreStorage genreStorage;
     private final RatingStorage ratingStorage;
@@ -31,10 +31,9 @@ public class FilmService {
         List<Film> films = filmStorage.listAllFilms();
         for (Film film : films) {
             List<Genre> genreList = genreStorage.getFilmGenres(film.getId().get());
+            film.setGenresList(genreList);
             Optional<Rating> rating = ratingStorage.getRating(film.getRatingId());
-            if (rating.isPresent()) {
-                film.setRating(rating.get());
-            }
+            rating.ifPresent(film::setRating);
         }
         return films;
     }
@@ -67,23 +66,49 @@ public class FilmService {
         return likesStorage.getTopFilmsInGenre(count, genreName);
     }
 
+    public Film createNewFilm(Film newFilm) {
+        // получить список жанров переданного фильма
+        List<AtomicLong> genresIds = newFilm.getGenresList().stream().map(Genre::getId).toList();
+        Long newFilmId = filmStorage.createNewFilm(newFilm).getId().get();
+        // создать записи в таблице связей фильм - жанр
+        genreStorage.setFilmGenres(newFilmId, genresIds);
+        return newFilm;
+    }
+
     public Film updateFilm(Film newFilm) {
         if (validateFilm(newFilm)) {
             Film oldFilm = filmStorage.getFilmById(newFilm.getId().get())
                     .orElseThrow(() -> new ValidationException("Такой фильм не найден"));
+            // рейтинг не обязательный параметр
             Optional<Rating> rating = ratingStorage.getRating(newFilm.getRatingId());
-
-            // Достать из переданного фильма перечень id жанров
+            // перечень id жанров из переданного фильма
             List<AtomicLong> genresIds = newFilm.getGenresList().stream().map(Genre::getId).toList();
             List<Genre> genres = genreStorage.getGenres(genresIds);
-            // рейтинг не обязательный параметр
-            if (rating.isPresent()) {
-                oldFilm.setRating(rating.get());
+            // возможно у переданного фильма есть неизвестные в БД жанры
+            if (genresIds.size() != genres.size()) {
+                log.warn("Не удалось получить корректный список жанров фильма {}", newFilm);
+                throw new DataOperationException("Список жанров переданного фильма не соответствует известным");
             }
-
+            // обновить поля объекта, взятого из БД
+            oldFilm.setName(newFilm.getName());
+            oldFilm.setDescription(newFilm.getDescription());
+            oldFilm.setDuration(newFilm.getDuration());
+            oldFilm.setReleaseDate(newFilm.getReleaseDate());
+            rating.ifPresent(oldFilm::setRating);
+            oldFilm.setGenresList(genres);
+            // вернуть объект обратно в БД
+            filmStorage.updateFilm(oldFilm);
+            return oldFilm;
         } else {
-            log.warn("Переданный на обновление фильм не прошёл валидацию ", newFilm);
+            log.warn("Переданный на обновление фильм {} не прошёл валидацию ", newFilm);
             throw new ValidationException("Некорректно заполнены свойства фильма");
+        }
+    }
+
+    public void deleteFilm(Long filmId) {
+        if (false == filmStorage.deleteFilm(filmId)) {
+            log.warn("Не удалось удалить фильм с id {}", filmId);
+            throw new DataOperationException("Не удалось удалить фильм");
         }
     }
 

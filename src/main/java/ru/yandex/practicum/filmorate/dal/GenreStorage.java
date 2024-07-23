@@ -12,5 +12,7 @@ public interface GenreStorage {
 
     void setFilmGenre(Long filmId, Long genreId);
 
+    void setFilmGenres(Long filmId, List<AtomicLong> genreIds);
+
     boolean delFilmGenre(Long filmId, Long genreId);
 }

@@ -17,4 +17,12 @@ public interface UserStorage {
     boolean deleteUser(Long userId);
 
     void friendshipRequest(Long sourceUserId, Long destinationUserId);
+
+    void destroyFriendship(Long sourceUserId, Long destinationUserId);
+
+    List<User> getFriends(Long userId);
+
+    List<User> getRealFriends(Long userId);
+
+    List<User> getMutualFriends(Long firstUserId, Long secondUserId);
 }

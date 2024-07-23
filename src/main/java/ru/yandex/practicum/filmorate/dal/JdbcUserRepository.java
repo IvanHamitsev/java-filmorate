@@ -17,12 +17,18 @@ public class JdbcUserRepository implements UserStorage {
     // используемые запросы
     private static final String GET_USER_BY_ID = "SELECT * FROM users WHERE id = ?";
     private static final String GET_ALL_USERS = "SELECT * FROM users";
+
+    // В задании сказано:
+    // если какой-то пользователь оставил вам заявку в друзья, то он будет в списке ваших друзей, а вы в его — нет
+    private static final String GET_ALL_USER_FRIENDS = "SELECT u.* FROM users u INNER JOIN friendship f " +
+            "ON f.source_id = u.id AND f.destination_id = ?";
     private static final String GET_REAL_USER_FRIENDS = "SELECT DISTINCT u.* FROM user u WHERE u.id IN " +
             "(SELECT source_id FROM friendship WHERE destination_id = ? AND source_id IN " +
             "(SELECT destination_id FROM friendship WHERE source_id = ?))";
-    private static final String GET_ALL_USER_FRIENDS = "SELECT DISTINCT u.* FROM user u JOIN friendship f ON " +
-            "((f.source_id = u.id AND f.destination_id = ?) OR " +
-            "(f.source_id = ? AND f.destination_id = u.id))";
+
+    private static final String GET_MUTUAL_FRIENDS = "SELECT u.* FROM users u WHERE u.id IN " +
+            "(SELECT source_id FROM friendship WHERE destination_id = ?) AND u.id IN " +
+            "(SELECT source_id FROM friendship WHERE destination_id = ?)";
     private static final String INSERT_USER = "INSERT INTO users (first_name, last_name, login, email, birthday) " +
             "VALUES (?, ?, ?, ?, ?)";
     private static final String UPDATE_USER = "UPDATE users SET first_name = ?, last_name = ?, login = ?, " +
@@ -32,14 +38,12 @@ public class JdbcUserRepository implements UserStorage {
     private static final String ADD_FRIENDSHIP_REQUEST = "INSERT INTO friendship (source_id, destination_id) VALUES " +
             "(?, ?)";
 
+    private static final String DEL_FRIENDSHIP_REQUEST = "DELETE FROM friendship WHERE source_id = ? " +
+            "AND destination_id = ?";
 
     @Override
     public List<User> listAllUsers() {
         List<User> userList = base.findMany(GET_ALL_USERS);
-        for (User user : userList) {
-            user.setAllFriendsList(base.findMany(GET_ALL_USER_FRIENDS, user.getId(), user.getId()));
-            user.setRealFriendsList(base.findMany(GET_REAL_USER_FRIENDS, user.getId(), user.getId()));
-        }
         return userList;
     }
 
@@ -92,5 +96,25 @@ public class JdbcUserRepository implements UserStorage {
     @Override
     public void friendshipRequest(Long sourceUserId, Long destinationUserId) {
         base.insert(ADD_FRIENDSHIP_REQUEST, sourceUserId, destinationUserId);
+    }
+
+    @Override
+    public void destroyFriendship(Long sourceUserId, Long destinationUserId) {
+        base.delete(DEL_FRIENDSHIP_REQUEST, sourceUserId, destinationUserId);
+    }
+
+    @Override
+    public List<User> getFriends(Long userId) {
+        return base.findMany(GET_ALL_USER_FRIENDS, userId);
+    }
+
+    @Override
+    public List<User> getRealFriends(Long userId) {
+        return base.findMany(GET_REAL_USER_FRIENDS, userId);
+    }
+
+    @Override
+    public List<User> getMutualFriends(Long firstUserId, Long secondUserId) {
+        return base.findMany(GET_MUTUAL_FRIENDS, firstUserId, secondUserId);
     }
 }
