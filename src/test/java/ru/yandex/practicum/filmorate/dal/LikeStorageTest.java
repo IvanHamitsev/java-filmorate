@@ -7,16 +7,12 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.dal.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.GenreRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.RatingRowMapper;
 import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
-import ru.yandex.practicum.filmorate.model.*;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.User;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 

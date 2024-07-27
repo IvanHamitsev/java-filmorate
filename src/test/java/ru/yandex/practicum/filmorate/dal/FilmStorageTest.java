@@ -9,7 +9,9 @@ import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.dal.mappers.FilmRowMapper;
 import ru.yandex.practicum.filmorate.dal.mappers.GenreRowMapper;
 import ru.yandex.practicum.filmorate.dal.mappers.RatingRowMapper;
-import ru.yandex.practicum.filmorate.model.*;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.Rating;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
