@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.DataOperationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -19,9 +21,15 @@ public class FilmController {
 
     private final FilmService filmService;
 
+
     @GetMapping
     public Collection<Film> listAllFilms() {
         return filmService.listAllFilms();
+    }
+
+    @GetMapping("{filmId}")
+    public Film getFilm(@PathVariable Long filmId) {
+        return filmService.getFilm(filmId);
     }
 
     @GetMapping("/popular")
@@ -31,6 +39,17 @@ public class FilmController {
             return filmService.getTopFilms(count.get());
         } else {
             return filmService.getTopFilms(10);
+        }
+    }
+
+    @GetMapping("/popular/genre/{genreName}")
+    public Collection<Film> listOfFilmsInGenre(@PathVariable String genreName, @RequestParam(required = false) Optional<Integer> count) {
+        log.trace("Запрос перечня топ-{} фильмов в жанре {}", count, genreName);
+        List<Film> filmsInGenre = filmService.getTopFilmsInGenre(count.orElse(10), genreName);
+        if (filmsInGenre.isEmpty()) {
+            throw new DataOperationException("Не найдено ни одного фильма в жанре " + genreName);
+        } else {
+            return filmsInGenre;
         }
     }
 

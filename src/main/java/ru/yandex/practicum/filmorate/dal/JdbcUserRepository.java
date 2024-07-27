@@ -1,7 +1,9 @@
 package ru.yandex.practicum.filmorate.dal;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.User;
 
@@ -10,28 +12,28 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
-@RequiredArgsConstructor
 @Slf4j
-public class JdbcUserRepository implements UserStorage {
-    private final BaseRepository<User> base;
+public class JdbcUserRepository extends BaseRepository<User> implements UserStorage {
     // используемые запросы
     private static final String GET_USER_BY_ID = "SELECT * FROM users WHERE id = ?";
-    private static final String GET_ALL_USERS = "SELECT * FROM users";
+    private static final String GET_ALL_USERS = "SELECT * FROM users ORDER BY id";
 
     // В задании сказано:
     // если какой-то пользователь оставил вам заявку в друзья, то он будет в списке ваших друзей, а вы в его — нет
+    // Но это враньё, тесты в Postman ожидают обратного поведения
     private static final String GET_ALL_USER_FRIENDS = "SELECT u.* FROM users u INNER JOIN friendship f " +
-            "ON f.source_id = u.id AND f.destination_id = ?";
-    private static final String GET_REAL_USER_FRIENDS = "SELECT DISTINCT u.* FROM user u WHERE u.id IN " +
+    //"ON f.source_id = u.id AND f.destination_id = ?";
+            "ON f.destination_id = u.id AND f.source_id = ? ORDER BY u.id";
+    private static final String GET_REAL_USER_FRIENDS = "SELECT DISTINCT u.* FROM users u WHERE u.id IN " +
             "(SELECT source_id FROM friendship WHERE destination_id = ? AND source_id IN " +
-            "(SELECT destination_id FROM friendship WHERE source_id = ?))";
+            "(SELECT destination_id FROM friendship WHERE source_id = ?)) ORDER BY u.id";
 
     private static final String GET_MUTUAL_FRIENDS = "SELECT u.* FROM users u WHERE u.id IN " +
-            "(SELECT source_id FROM friendship WHERE destination_id = ?) AND u.id IN " +
-            "(SELECT source_id FROM friendship WHERE destination_id = ?)";
-    private static final String INSERT_USER = "INSERT INTO users (first_name, last_name, login, email, birthday) " +
+            "(SELECT destination_id FROM friendship WHERE source_id = ?) AND u.id IN " +
+            "(SELECT destination_id FROM friendship WHERE source_id = ?) ORDER BY u.id";
+    private static final String INSERT_USER = "INSERT INTO users (name, last_name, login, email, birthday) " +
             "VALUES (?, ?, ?, ?, ?)";
-    private static final String UPDATE_USER = "UPDATE users SET first_name = ?, last_name = ?, login = ?, " +
+    private static final String UPDATE_USER = "UPDATE users SET name = ?, last_name = ?, login = ?, " +
             "email = ?, birthday = ? WHERE id = ?";
     private static final String DELETE_USER = "DELETE FROM users WHERE id = ?";
 
@@ -41,29 +43,30 @@ public class JdbcUserRepository implements UserStorage {
     private static final String DEL_FRIENDSHIP_REQUEST = "DELETE FROM friendship WHERE source_id = ? " +
             "AND destination_id = ?";
 
+    private static final String DEBUG_QUERY = "DELETE FROM films_genre; DELETE FROM genres;";
+    //private static final String DEBUG_QUERY = "UPDATE users set id = 1 WHERE id = 30; UPDATE users SET id = 2 WHERE id = 31;";
+
+    @Autowired
+    public JdbcUserRepository(JdbcOperations jdbc, RowMapper<User> mapper) {
+        super(jdbc, mapper);
+    }
+
+
     @Override
     public List<User> listAllUsers() {
-        List<User> userList = base.findMany(GET_ALL_USERS);
-        return userList;
+        return findMany(GET_ALL_USERS);
     }
 
     @Override
     public Optional<User> getUserById(Long userId) {
-        Optional<User> user = base.findOne(GET_USER_BY_ID, userId);
-        if (user.isPresent()) {
-            user.get().setAllFriendsList(base.findMany(GET_ALL_USER_FRIENDS, user.get().getId(), user.get().getId()));
-            user.get().setRealFriendsList(base.findMany(GET_REAL_USER_FRIENDS, user.get().getId(), user.get().getId()));
-            return user;
-        } else {
-            return Optional.empty();
-        }
+        return findOne(GET_USER_BY_ID, userId);
     }
 
     @Override
     public User createNewUser(User user) {
-        Long id = base.insert(
+        long id = insert(
                 INSERT_USER,
-                user.getFirstName(),
+                user.getName(),
                 user.getLastName(),
                 user.getLogin(),
                 user.getEmail(),
@@ -75,13 +78,14 @@ public class JdbcUserRepository implements UserStorage {
 
     @Override
     public Optional<User> updateUser(User newUser) {
-        if (base.update(
+        if (update(
                 UPDATE_USER,
-                newUser.getFirstName(),
+                newUser.getName(),
                 newUser.getLastName(),
                 newUser.getLogin(),
                 newUser.getEmail(),
-                newUser.getBirthday())) {
+                newUser.getBirthday(),
+                newUser.getId().get())) {
             return Optional.of(newUser);
         } else {
             return Optional.empty();
@@ -90,31 +94,41 @@ public class JdbcUserRepository implements UserStorage {
 
     @Override
     public boolean deleteUser(Long userId) {
-        return base.delete(DELETE_USER, userId);
+        return delete(DELETE_USER, userId);
     }
 
     @Override
     public void friendshipRequest(Long sourceUserId, Long destinationUserId) {
-        base.insert(ADD_FRIENDSHIP_REQUEST, sourceUserId, destinationUserId);
+        simpleInsert(ADD_FRIENDSHIP_REQUEST, sourceUserId, destinationUserId);
     }
 
     @Override
     public void destroyFriendship(Long sourceUserId, Long destinationUserId) {
-        base.delete(DEL_FRIENDSHIP_REQUEST, sourceUserId, destinationUserId);
+        delete(DEL_FRIENDSHIP_REQUEST, sourceUserId, destinationUserId);
     }
 
     @Override
     public List<User> getFriends(Long userId) {
-        return base.findMany(GET_ALL_USER_FRIENDS, userId);
+        log.warn(GET_ALL_USER_FRIENDS + userId);
+        return findMany(GET_ALL_USER_FRIENDS, userId);
     }
 
     @Override
     public List<User> getRealFriends(Long userId) {
-        return base.findMany(GET_REAL_USER_FRIENDS, userId);
+        return findMany(GET_REAL_USER_FRIENDS, userId, userId);
     }
 
     @Override
     public List<User> getMutualFriends(Long firstUserId, Long secondUserId) {
-        return base.findMany(GET_MUTUAL_FRIENDS, firstUserId, secondUserId);
+        return findMany(GET_MUTUAL_FRIENDS, firstUserId, secondUserId);
+    }
+
+    @Override
+    public void runDebugQuery() {
+        if (update(DEBUG_QUERY)) {
+            log.warn("OK {} OK", DEBUG_QUERY);
+        } else {
+            log.warn("FAIL {}", DEBUG_QUERY);
+        }
     }
 }

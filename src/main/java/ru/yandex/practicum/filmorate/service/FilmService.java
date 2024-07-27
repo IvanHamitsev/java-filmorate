@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.dal.*;
 import ru.yandex.practicum.filmorate.exception.DataOperationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
@@ -23,6 +24,7 @@ import static ru.yandex.practicum.filmorate.model.Film.THE_OLDEST_MOVIE;
 public class FilmService {
     // репозитории
     private final FilmStorage filmStorage;
+    private final UserStorage userStorage;
     private final LikesStorage likesStorage;
     private final GenreStorage genreStorage;
     private final RatingStorage ratingStorage;
@@ -33,12 +35,31 @@ public class FilmService {
             List<Genre> genreList = genreStorage.getFilmGenres(film.getId().get());
             film.setGenresList(genreList);
             Optional<Rating> rating = ratingStorage.getRating(film.getRatingId());
-            rating.ifPresent(film::setRating);
+            rating.ifPresent(film::setMpa);
         }
         return films;
     }
 
+    public Film getFilm(Long filmId) {
+
+        Film film = filmStorage.getFilmById(filmId)
+                .orElseThrow(() -> new NotFoundException("Такой фильм не найден"));
+        // внешние связи фильма получаем отдельно
+        Optional<Rating> rating = ratingStorage.getFilmRating(filmId);
+        List<Genre> genres = genreStorage.getFilmGenres(filmId);
+        rating.ifPresent(film::setMpa);
+        film.setGenresList(genres);
+        log.trace("Вернули фильм {}", film);
+        return film;
+    }
+
     public void setLike(Long filmId, Long userId) {
+        log.trace("Запрос поставить лайк фильму {} от пользователя {}", filmId, userId);
+        // проверить, есть ли такие пользователь и фильм
+        if (userStorage.getUserById(userId).isEmpty() || filmStorage.getFilmById(filmId).isEmpty()) {
+            log.warn("Переданы некорректные данные: пользователь {}, фильм {}", userId, filmId);
+            throw new NotFoundException("Неизвестные id пользователя " + userId + " фильма " + filmId);
+        }
         likesStorage.setLike(filmId, userId);
     }
 
@@ -67,8 +88,18 @@ public class FilmService {
     }
 
     public Film createNewFilm(Film newFilm) {
+        // проверить корректность полей переданного фильма
+        if (!validateFilm(newFilm)) {
+            log.warn("Переданный фильм не прошёл валидацию: {}", newFilm);
+            throw new ValidationException("Некорректно заполнены поля фильма " + newFilm);
+        }
+        // далее проверить: корректность жанров и рейтинга
+        if (!deepValidateFilm(newFilm)) {
+            log.warn("Переданный фильм ссылается на неверные сущности жанра/рейтинга: {}", newFilm);
+            throw new ValidationException("Некорректно заполнены ссылки на жанр, рейтинг " + newFilm);
+        }
         // получить список жанров переданного фильма
-        List<AtomicLong> genresIds = newFilm.getGenresList().stream().map(Genre::getId).toList();
+        List<AtomicLong> genresIds = newFilm.getGenres().stream().map(Genre::getId).toList();
         Long newFilmId = filmStorage.createNewFilm(newFilm).getId().get();
         // создать записи в таблице связей фильм - жанр
         genreStorage.setFilmGenres(newFilmId, genresIds);
@@ -78,11 +109,12 @@ public class FilmService {
     public Film updateFilm(Film newFilm) {
         if (validateFilm(newFilm)) {
             Film oldFilm = filmStorage.getFilmById(newFilm.getId().get())
-                    .orElseThrow(() -> new ValidationException("Такой фильм не найден"));
+                    .orElseThrow(() -> new NotFoundException("Такой фильм не найден"));
             // рейтинг не обязательный параметр
             Optional<Rating> rating = ratingStorage.getRating(newFilm.getRatingId());
             // перечень id жанров из переданного фильма
-            List<AtomicLong> genresIds = newFilm.getGenresList().stream().map(Genre::getId).toList();
+            List<AtomicLong> genresIds = newFilm.getGenres().stream().map(Genre::getId).toList();
+            log.trace("Получили лист из {} жанров", genresIds.size());
             List<Genre> genres = genreStorage.getGenres(genresIds);
             // возможно у переданного фильма есть неизвестные в БД жанры
             if (genresIds.size() != genres.size()) {
@@ -94,7 +126,7 @@ public class FilmService {
             oldFilm.setDescription(newFilm.getDescription());
             oldFilm.setDuration(newFilm.getDuration());
             oldFilm.setReleaseDate(newFilm.getReleaseDate());
-            rating.ifPresent(oldFilm::setRating);
+            rating.ifPresent(oldFilm::setMpa);
             oldFilm.setGenresList(genres);
             // вернуть объект обратно в БД
             filmStorage.updateFilm(oldFilm);
@@ -108,13 +140,34 @@ public class FilmService {
     public void deleteFilm(Long filmId) {
         if (false == filmStorage.deleteFilm(filmId)) {
             log.warn("Не удалось удалить фильм с id {}", filmId);
-            throw new DataOperationException("Не удалось удалить фильм");
+            throw new NotFoundException("Не удалось удалить фильм");
         }
     }
 
     // метод для валидации описания фильма
     public static boolean validateFilm(Film film) {
-        if (film == null || film.getName() == null || film.getName().isEmpty() || film.getReleaseDate().isBefore(THE_OLDEST_MOVIE) || film.getDescription().length() > MAX_DESCRIPTION_LENGTH || film.getDuration() <= 0) {
+        if (film == null ||
+                film.getName() == null ||
+                film.getName().isEmpty() ||
+                film.getReleaseDate().isBefore(THE_OLDEST_MOVIE) ||
+                film.getDescription().length() > MAX_DESCRIPTION_LENGTH ||
+                film.getDuration() <= 0) {
+            return false;
+        }
+        return true;
+    }
+
+    // дополнительная валидация корректности ссылок на жанры и рейтинг
+    public boolean deepValidateFilm(Film film) {
+        for (Genre genre : film.getGenres()) {
+            if (genreStorage.getGenre(genre.getId().get()).isEmpty()) {
+                log.warn("Переданный фильм {} ссылается на несуществующий жанр {}", film, genre.getId().get());
+                return false;
+            }
+        }
+        // проверить корректность mpa
+        if (ratingStorage.getRating(film.getRatingId()).isEmpty()) {
+            log.warn("Переданный фильм {} ссылается на несуществующий рейтинг {}", film.getName(), film.getRatingId());
             return false;
         }
         return true;

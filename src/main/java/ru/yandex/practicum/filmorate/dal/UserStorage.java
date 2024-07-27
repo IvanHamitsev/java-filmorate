@@ -25,4 +25,6 @@ public interface UserStorage {
     List<User> getRealFriends(Long userId);
 
     List<User> getMutualFriends(Long firstUserId, Long secondUserId);
+
+    void runDebugQuery();
 }

@@ -16,12 +16,14 @@ public class UserRowMapper implements RowMapper<User> {
     public User mapRow(ResultSet resultSet, int rowNum) throws SQLException {
         User user = new User();
         user.setId(new AtomicLong(resultSet.getLong("id")));
-        user.setFirstName(resultSet.getString("first_name"));
+        user.setName(resultSet.getString("name"));
         user.setLastName(resultSet.getString("last_name"));
         user.setLogin(resultSet.getString("login"));
         user.setEmail(resultSet.getString("email"));
-        //user.setBirthday(resultSet.getTimestamp("birthday").toLocalDateTime().toLocalDate());
-        user.setBirthday(resultSet.getDate("birthday").toLocalDate());
+        var birthDay = resultSet.getDate("birthday");
+        if (null != birthDay) {
+            user.setBirthday(birthDay.toLocalDate());
+        }
         return user;
     }
 }

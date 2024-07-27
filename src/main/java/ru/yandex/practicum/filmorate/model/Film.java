@@ -7,6 +7,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,22 +29,21 @@ public class Film {
     private LocalDate releaseDate;
     // в тестах для Postman использовано число, а не Duration, поэтому здесь также число
     private Long duration;
-    private Rating rating;
-    private Set<User> likesList = new HashSet<>();
-    private Set<Genre> genresList = new HashSet<>();
+    private Rating mpa;
+    private Set<User> likes = new HashSet<>();
+    private List<Genre> genres = new ArrayList<>();
 
     public Long getRatingId() {
-        if (rating == null) {
+        if (mpa == null) {
             return null;
         } else {
-            return rating.getId().get();
+            return mpa.getId().get();
         }
     }
 
-    // с такой функцией не справится Lombok, он сделает аргумент Set
+    // с такой функцией не справится Lombok, сделаем копию входного листа
     public void setGenresList(List<Genre> inp) {
-        genresList.clear();
-        genresList.addAll(inp);
+        genres = new ArrayList<>(inp);
     }
 
     // реализация hashCode и equals в Lombok не умеет брать get()

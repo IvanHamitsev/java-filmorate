@@ -1,12 +1,12 @@
 package ru.yandex.practicum.filmorate.dal;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.DataOperationException;
 
 import java.sql.PreparedStatement;
@@ -15,8 +15,8 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.Optional;
 
-// Это не репозиторий, это общий инструмент, поэтому не аннотация Repository
-@Component
+// Это не репозиторий, это общий инструмент
+@Slf4j
 @RequiredArgsConstructor
 public class BaseRepository<T> {
     private final JdbcOperations jdbc;
@@ -67,6 +67,11 @@ public class BaseRepository<T> {
         } else {
             throw new DataOperationException("Не удалось сохранить данные");
         }
+    }
+
+    // в случае, если insert не нужно возвращать ключь, достаточно jdbc.update
+    protected void simpleInsert(String query, Object... params) {
+        jdbc.update(query, params);
     }
 
     protected int[] simpleBatchInsert(String query, List<Object[]> param) {

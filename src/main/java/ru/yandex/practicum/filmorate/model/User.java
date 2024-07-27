@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @ToString
 public class User {
     private AtomicLong id;
-    private String firstName;
+    private String name;
     private String lastName;
     @NotNull
     @NotBlank
