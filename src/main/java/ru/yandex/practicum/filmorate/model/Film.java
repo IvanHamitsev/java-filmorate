@@ -1,10 +1,12 @@
 package ru.yandex.practicum.filmorate.model;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.validator.constraints.Length;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -25,9 +27,11 @@ public class Film {
     @NotNull
     @NotBlank
     private String name;
+    @Length(max = MAX_DESCRIPTION_LENGTH)
     private String description;
     private LocalDate releaseDate;
     // в тестах для Postman использовано число, а не Duration, поэтому здесь также число
+    @Min(1)
     private Long duration;
     private Rating mpa;
     private Set<User> likes = new HashSet<>();

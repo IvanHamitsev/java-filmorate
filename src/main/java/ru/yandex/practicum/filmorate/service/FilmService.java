@@ -1,8 +1,10 @@
 package ru.yandex.practicum.filmorate.service;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 import ru.yandex.practicum.filmorate.dal.*;
 import ru.yandex.practicum.filmorate.exception.DataOperationException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
@@ -15,12 +17,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static ru.yandex.practicum.filmorate.model.Film.MAX_DESCRIPTION_LENGTH;
 import static ru.yandex.practicum.filmorate.model.Film.THE_OLDEST_MOVIE;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Validated
 public class FilmService {
     // репозитории
     private final FilmStorage filmStorage;
@@ -87,8 +89,8 @@ public class FilmService {
         return likesStorage.getTopFilmsInGenre(count, genreName);
     }
 
-    public Film createNewFilm(Film newFilm) {
-        // проверить корректность полей переданного фильма
+    public Film createNewFilm(@Valid Film newFilm) {
+        // проверить только то, что не проверяет Jakarta Bean Validation
         if (!validateFilm(newFilm)) {
             log.warn("Переданный фильм не прошёл валидацию: {}", newFilm);
             throw new ValidationException("Некорректно заполнены поля фильма " + newFilm);
@@ -106,8 +108,9 @@ public class FilmService {
         return newFilm;
     }
 
-    public Film updateFilm(Film newFilm) {
+    public Film updateFilm(@Valid Film newFilm) {
         if (validateFilm(newFilm)) {
+            // не применяем deepValidateFilm(film) поскольку и будем работать с genres и rating
             Film oldFilm = filmStorage.getFilmById(newFilm.getId().get())
                     .orElseThrow(() -> new NotFoundException("Такой фильм не найден"));
             // рейтинг не обязательный параметр
@@ -146,12 +149,12 @@ public class FilmService {
 
     // метод для валидации описания фильма
     public static boolean validateFilm(Film film) {
-        if (film == null ||
-                film.getName() == null ||
-                film.getName().isEmpty() ||
-                film.getReleaseDate().isBefore(THE_OLDEST_MOVIE) ||
-                film.getDescription().length() > MAX_DESCRIPTION_LENGTH ||
-                film.getDuration() <= 0) {
+        // простую валидацию выполняет Jakarta Bean Validation :
+        // film.getName() != null
+        // film.getDuration() > 0
+        // film.length() > MAX_DESCRIPTION_LENGTH
+
+        if (film == null || film.getReleaseDate().isBefore(THE_OLDEST_MOVIE)) {
             return false;
         }
         return true;

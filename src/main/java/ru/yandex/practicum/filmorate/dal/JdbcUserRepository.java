@@ -22,7 +22,7 @@ public class JdbcUserRepository extends BaseRepository<User> implements UserStor
     // если какой-то пользователь оставил вам заявку в друзья, то он будет в списке ваших друзей, а вы в его — нет
     // Но это враньё, тесты в Postman ожидают обратного поведения
     private static final String GET_ALL_USER_FRIENDS = "SELECT u.* FROM users u INNER JOIN friendship f " +
-    //"ON f.source_id = u.id AND f.destination_id = ?";
+            //"ON f.source_id = u.id AND f.destination_id = ?";
             "ON f.destination_id = u.id AND f.source_id = ? ORDER BY u.id";
     private static final String GET_REAL_USER_FRIENDS = "SELECT DISTINCT u.* FROM users u WHERE u.id IN " +
             "(SELECT source_id FROM friendship WHERE destination_id = ? AND source_id IN " +
@@ -109,7 +109,7 @@ public class JdbcUserRepository extends BaseRepository<User> implements UserStor
 
     @Override
     public List<User> getFriends(Long userId) {
-        log.warn(GET_ALL_USER_FRIENDS + userId);
+        log.trace(GET_ALL_USER_FRIENDS + userId);
         return findMany(GET_ALL_USER_FRIENDS, userId);
     }
 
@@ -121,14 +121,5 @@ public class JdbcUserRepository extends BaseRepository<User> implements UserStor
     @Override
     public List<User> getMutualFriends(Long firstUserId, Long secondUserId) {
         return findMany(GET_MUTUAL_FRIENDS, firstUserId, secondUserId);
-    }
-
-    @Override
-    public void runDebugQuery() {
-        if (update(DEBUG_QUERY)) {
-            log.warn("OK {} OK", DEBUG_QUERY);
-        } else {
-            log.warn("FAIL {}", DEBUG_QUERY);
-        }
     }
 }

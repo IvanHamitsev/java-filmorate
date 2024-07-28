@@ -23,11 +23,6 @@ public class UserController {
         return userService.getListOfAllUsers();
     }
 
-    @GetMapping("/debug")
-    public void runDebugQuery() {
-        userService.debugQuery();
-    }
-
     @GetMapping("/{id}/friends")
     public Collection<User> listUserFriends(@PathVariable(value = "id", required = false) Long userId) {
         // проверки на null и существование пользователя внутри service

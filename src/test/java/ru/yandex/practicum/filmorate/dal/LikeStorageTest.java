@@ -71,6 +71,13 @@ public class LikeStorageTest {
         likesStorage.delLike(film3Id, user3Id);
 
         assertThat(likesStorage.getLikes(film3Id)).isEqualTo(0L);
+
+        // нет ли проблем удалить фильм, у которого есть лайки
+        assertThat(filmStorage.deleteFilm(film1Id)).isTrue();
+        assertThat(filmStorage.deleteFilm(film2Id)).isTrue();
+        assertThat(filmStorage.deleteFilm(film3Id)).isTrue();
+
+        assertThat(filmStorage.listAllFilms()).asList().isEmpty();
     }
 
     @Test

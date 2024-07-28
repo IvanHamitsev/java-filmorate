@@ -31,7 +31,7 @@ public class FilmStorageTest {
     private final GenreStorage genreStorage;
 
     @Test
-    public void testInsertFilm() {
+    public void testInsertAndDeleteFilm() {
         Film newFilm = new Film();
         newFilm.setName("Название");
         newFilm.setDescription("Описание фильма");
@@ -44,22 +44,26 @@ public class FilmStorageTest {
 
         boolean exists = filmStorage.filmExists(filmId);
 
-        assertThat(filmFromDb)
-                .isPresent()
-                .hasValueSatisfying(film ->
-                        assertThat(film).hasFieldOrPropertyWithValue("name", newFilm.getName()))
-                .hasValueSatisfying(film ->
-                        assertThat(film).hasFieldOrPropertyWithValue("description", newFilm.getDescription()))
-                .hasValueSatisfying(film ->
-                        assertThat(film).hasFieldOrPropertyWithValue("releaseDate", newFilm.getReleaseDate()))
-                .hasValueSatisfying(film ->
-                        assertThat(film).hasFieldOrPropertyWithValue("duration", newFilm.getDuration()));
+        assertThat(filmFromDb).isPresent().hasValueSatisfying(film -> assertThat(film).hasFieldOrPropertyWithValue("name", newFilm.getName())).hasValueSatisfying(film -> assertThat(film).hasFieldOrPropertyWithValue("description", newFilm.getDescription())).hasValueSatisfying(film -> assertThat(film).hasFieldOrPropertyWithValue("releaseDate", newFilm.getReleaseDate())).hasValueSatisfying(film -> assertThat(film).hasFieldOrPropertyWithValue("duration", newFilm.getDuration()));
 
-        assertThat(filmsList)
-                .asList()
-                .isNotEmpty();
+        assertThat(filmsList).asList().isNotEmpty();
 
         assertThat(exists).isTrue();
+
+        // попытака удалить не существующий фильм
+        assertThat(filmStorage.deleteFilm(filmId + 1L)).isFalse();
+        assertThat(filmStorage.deleteFilm(filmId)).isTrue();
+
+        filmFromDb = filmStorage.getFilmById(filmId);
+        exists = filmStorage.filmExists(filmId);
+        filmsList = filmStorage.listAllFilms();
+
+        assertThat(filmFromDb).isEmpty();
+        assertThat(exists).isFalse();
+        assertThat(filmsList).asList().isEmpty();
+
+        // попытака повторно удалить
+        assertThat(filmStorage.deleteFilm(filmId)).isFalse();
     }
 
     @Test
@@ -75,8 +79,7 @@ public class FilmStorageTest {
         Optional<Rating> rating;
         rating = ratingStorage.getRating(1L);
 
-        assertThat(rating)
-                .isPresent();
+        assertThat(rating).isPresent();
 
         newFilm.setId(new AtomicLong(filmId));
         newFilm.setMpa(rating.get());
@@ -94,21 +97,21 @@ public class FilmStorageTest {
         // рейтинг достать отдельной сущностью
         Optional<Rating> ratingFromDb = ratingStorage.getFilmRating(filmId);
 
-        assertThat(filmFromDb)
-                .isPresent()
-                .hasValueSatisfying(film ->
-                        assertThat(film).hasFieldOrPropertyWithValue("name", newFilm.getName()))
-                .hasValueSatisfying(film ->
-                        assertThat(film).hasFieldOrPropertyWithValue("description", newFilm.getDescription()))
-                .hasValueSatisfying(film ->
-                        assertThat(film).hasFieldOrPropertyWithValue("releaseDate", newFilm.getReleaseDate()))
-                .hasValueSatisfying(film ->
-                        assertThat(film).hasFieldOrPropertyWithValue("duration", newFilm.getDuration()));
+        assertThat(filmFromDb).isPresent().hasValueSatisfying(film -> assertThat(film).hasFieldOrPropertyWithValue("name", newFilm.getName())).hasValueSatisfying(film -> assertThat(film).hasFieldOrPropertyWithValue("description", newFilm.getDescription())).hasValueSatisfying(film -> assertThat(film).hasFieldOrPropertyWithValue("releaseDate", newFilm.getReleaseDate())).hasValueSatisfying(film -> assertThat(film).hasFieldOrPropertyWithValue("duration", newFilm.getDuration()));
         // отдельно проверить рейтинг
-        assertThat(ratingFromDb)
-                .isPresent()
-                .hasValueSatisfying(film ->
-                        assertThat(film).isEqualTo(rating.get()));
+        assertThat(ratingFromDb).isPresent().hasValueSatisfying(film -> assertThat(film).isEqualTo(rating.get()));
+
+        // убрать рейтинг фильма
+        newFilm.setMpa(null);
+        filmStorage.updateFilm(newFilm);
+
+        ratingFromDb = ratingStorage.getFilmRating(filmId);
+
+        assertThat(ratingFromDb).isEmpty();
+
+        filmStorage.deleteFilm(filmId);
+        exists = filmStorage.filmExists(filmId);
+        assertThat(exists).isFalse();
     }
 
     @Test
@@ -121,14 +124,15 @@ public class FilmStorageTest {
 
         Long filmId = filmStorage.createNewFilm(newFilm).getId().get();
 
+        List<Genre> dBfilmGenres = genreStorage.getFilmGenres(filmId);
+        assertThat(dBfilmGenres).asList().isEmpty();
+
         Optional<Genre> genre1 = genreStorage.getGenre(1L);
         Optional<Genre> genre2 = genreStorage.getGenre(2L);
 
-        assertThat(genre1)
-                .isPresent();
+        assertThat(genre1).isPresent();
 
-        assertThat(genre2)
-                .isPresent();
+        assertThat(genre2).isPresent();
 
         List<AtomicLong> genresIds = new ArrayList<>();
         genresIds.add(genre1.get().getId());
@@ -136,9 +140,15 @@ public class FilmStorageTest {
         genreStorage.setFilmGenres(filmId, genresIds);
 
         // жанры достать отдельной сущностью
-        List<Genre> dBfilmGenres = genreStorage.getFilmGenres(filmId);
-
+        dBfilmGenres = genreStorage.getFilmGenres(filmId);
         assertThat(dBfilmGenres).asList().contains(genre1.get(), genre2.get());
-    }
 
+        // работает ли удаление фильма, когда на него есть внешние ссылки?
+        filmStorage.deleteFilm(filmId);
+        assertThat(filmStorage.filmExists(filmId)).isFalse();
+        assertThat(filmStorage.listAllFilms()).asList().isEmpty();
+
+        // а жанры при этом сохранились
+        assertThat(genreStorage.listAllGenres()).asList().isNotEmpty();
+    }
 }

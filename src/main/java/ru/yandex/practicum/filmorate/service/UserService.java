@@ -126,8 +126,4 @@ public class UserService {
 
         return true;
     }
-
-    public void debugQuery() {
-        userStorage.runDebugQuery();
-    }
 }

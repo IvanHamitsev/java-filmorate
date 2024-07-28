@@ -1,11 +1,12 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import jakarta.validation.Valid;
+import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.DataOperationException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
@@ -43,9 +44,9 @@ public class FilmController {
     }
 
     @GetMapping("/popular/genre/{genreName}")
-    public Collection<Film> listOfFilmsInGenre(@PathVariable String genreName, @RequestParam(required = false) Optional<Integer> count) {
+    public Collection<Film> listOfFilmsInGenre(@PathVariable String genreName, @RequestParam(defaultValue = "10") Integer count) {
         log.trace("Запрос перечня топ-{} фильмов в жанре {}", count, genreName);
-        List<Film> filmsInGenre = filmService.getTopFilmsInGenre(count.orElse(10), genreName);
+        List<Film> filmsInGenre = filmService.getTopFilmsInGenre(count, genreName);
         if (filmsInGenre.isEmpty()) {
             throw new DataOperationException("Не найдено ни одного фильма в жанре " + genreName);
         } else {
@@ -55,13 +56,21 @@ public class FilmController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Film createNewFilm(@Valid @RequestBody Film film) {
-        return filmService.createNewFilm(film);
+    public Film createNewFilm(@RequestBody Film film) {
+        try {
+            return filmService.createNewFilm(film);
+        } catch (ConstraintViolationException e) { // надо заменить стандартное исключение
+            throw new ValidationException("Переданный фильм не соответствует критериям: " + e.getMessage());
+        }
     }
 
     @PutMapping
     public Film updateFilm(@RequestBody Film newFilm) {
-        return filmService.updateFilm(newFilm);
+        try {
+            return filmService.updateFilm(newFilm);
+        } catch (ConstraintViolationException e) { // надо заменить стандартное исключение
+            throw new ValidationException("Переданный фильм не соответствует критериям: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{id}/like/{userId}")

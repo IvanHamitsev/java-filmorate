@@ -10,6 +10,7 @@ import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,7 +25,7 @@ class UserStorageTests {
     private final UserStorage userStorage;
 
     @Test
-    public void testInsertUser() {
+    public void testInsertAndDeleteUser() {
         User newUser = new User();
         newUser.setName("Имя");
         newUser.setLastName("Фамилия");
@@ -51,6 +52,14 @@ class UserStorageTests {
         assertThat(allUsers)
                 .asList()
                 .isNotEmpty();
+
+        // попытака удалить не существующего пользователя
+        assertThat(userStorage.deleteUser(userId + 1L)).isFalse();
+        assertThat(userStorage.deleteUser(userId)).isTrue();
+        // а повторно не должен удаляться
+        assertThat(userStorage.deleteUser(userId)).isFalse();
+
+        assertThat(userStorage.listAllUsers()).asList().isEmpty();
     }
 
     @Test
@@ -64,14 +73,14 @@ class UserStorageTests {
 
         Long userId = userStorage.createNewUser(newUser).getId().get();
 
-        newUser.setId(new AtomicLong((userId)));
+        newUser.setId(new AtomicLong(userId));
         newUser.setName("НовоеИмя");
         newUser.setLastName("НоваяФамилия");
         newUser.setLogin("NewUserLogin");
         newUser.setEmail("new_user@mail.ru");
         newUser.setBirthday(LocalDate.now().minusYears(40));
 
-        userStorage.updateUser(newUser);
+        assertThat(userStorage.updateUser(newUser)).isPresent();
 
         Optional<User> userFromDb = userStorage.getUserById(userId);
 
@@ -87,6 +96,13 @@ class UserStorageTests {
                         assertThat(user).hasFieldOrPropertyWithValue("email", newUser.getEmail()))
                 .hasValueSatisfying(user ->
                         assertThat(user).hasFieldOrPropertyWithValue("birthday", newUser.getBirthday()));
+
+        // попытаемся обновить неизвестного базе пользователя
+        newUser.setId(new AtomicLong(userId + 1));
+        assertThat(userStorage.updateUser(newUser)).isEmpty();
+
+        // нет ли проблем удалить пользователя, подвергавшегося апдейту
+        assertThat(userStorage.deleteUser(userId)).isTrue();
     }
 
     @Test
@@ -111,168 +127,162 @@ class UserStorageTests {
 
     @Test
     public void testMakeFriends() {
-        User newUser1 = new User();
-        newUser1.setName("Имя");
-        newUser1.setLastName("Фамилия");
-        newUser1.setLogin("userLogin");
-        newUser1.setEmail("user@mail.ru");
-        newUser1.setBirthday(LocalDate.now().minusYears(30));
-
-        User newUser2 = new User();
-        newUser2.setName("ДругоеИмя");
-        newUser2.setLastName("ДругаяФамилия");
-        newUser2.setLogin("User2Login");
-        newUser2.setEmail("user2@mail.ru");
-        newUser2.setBirthday(LocalDate.now().minusYears(40));
-
-        Long user1Id = userStorage.createNewUser(newUser1).getId().get();
-        Long user2Id = userStorage.createNewUser(newUser2).getId().get();
+        List<Long> usersIds = makeUsers(3);
 
         // первоначальная связь
-        userStorage.friendshipRequest(user1Id, user2Id);
+        userStorage.friendshipRequest(usersIds.get(1), usersIds.get(2));
 
-        List<User> user1Friends = userStorage.getFriends(user1Id);
-        List<User> user2Friends = userStorage.getFriends(user2Id);
+        List<User> user0Friends = userStorage.getFriends(usersIds.get(0));
+        List<User> user1Friends = userStorage.getFriends(usersIds.get(1));
+        List<User> user2Friends = userStorage.getFriends(usersIds.get(2));
 
-        assertThat(user1Friends).asList().isNotEmpty();
+        assertThat(user0Friends).asList().isEmpty();
+
+        assertThat(user1Friends).asList().contains(userStorage.getUserById(usersIds.get(2)).get());
+        assertThat(user1Friends).asList().doesNotContain(userStorage.getUserById(usersIds.get(0)).get());
+
         assertThat(user2Friends).asList().isEmpty();
 
-        // добавим и обратную дружбу
-        userStorage.friendshipRequest(user2Id, user1Id);
+        // добавим и обратную дружбу, она не должна мешать
+        userStorage.friendshipRequest(usersIds.get(2), usersIds.get(1));
 
-        user1Friends = userStorage.getFriends(user1Id);
-        user2Friends = userStorage.getFriends(user2Id);
+        user0Friends = userStorage.getFriends(usersIds.get(0));
+        user1Friends = userStorage.getFriends(usersIds.get(1));
+        user2Friends = userStorage.getFriends(usersIds.get(2));
+
+        assertThat(user0Friends).asList().isEmpty();
 
         assertThat(user1Friends).asList().isNotEmpty();
         assertThat(user2Friends).asList().isNotEmpty();
 
-        // удалим первоначальную
-        userStorage.destroyFriendship(user1Id, user2Id);
+        assertThat(user1Friends).asList().contains(userStorage.getUserById(usersIds.get(2)).get());
+        assertThat(user1Friends).asList().doesNotContain(userStorage.getUserById(usersIds.get(0)).get());
+        assertThat(user2Friends).asList().contains(userStorage.getUserById(usersIds.get(1)).get());
+        assertThat(user2Friends).asList().doesNotContain(userStorage.getUserById(usersIds.get(0)).get());
 
-        user1Friends = userStorage.getFriends(user1Id);
-        user2Friends = userStorage.getFriends(user2Id);
+        // удалим первоначальную
+        userStorage.destroyFriendship(usersIds.get(1), usersIds.get(2));
+
+        user0Friends = userStorage.getFriends(usersIds.get(0));
+        user1Friends = userStorage.getFriends(usersIds.get(1));
+        user2Friends = userStorage.getFriends(usersIds.get(2));
 
         // теперь оказалось наоборот
+        assertThat(user0Friends).asList().isEmpty();
         assertThat(user1Friends).asList().isEmpty();
-        assertThat(user2Friends).asList().isNotEmpty();
+        assertThat(user2Friends).asList().contains(userStorage.getUserById(usersIds.get(1)).get());
     }
 
     @Test
     public void testRealFriends() {
-        User newUser1 = new User();
-        newUser1.setName("Имя");
-        newUser1.setLastName("Фамилия");
-        newUser1.setLogin("userLogin");
-        newUser1.setEmail("user@mail.ru");
-        newUser1.setBirthday(LocalDate.now().minusYears(30));
-
-        User newUser2 = new User();
-        newUser2.setName("ДругоеИмя");
-        newUser2.setLastName("ДругаяФамилия");
-        newUser2.setLogin("User2Login");
-        newUser2.setEmail("user2@mail.ru");
-        newUser2.setBirthday(LocalDate.now().minusYears(40));
-
-        Long user1Id = userStorage.createNewUser(newUser1).getId().get();
-        Long user2Id = userStorage.createNewUser(newUser2).getId().get();
+        List<Long> usersIds = makeUsers(4);
 
         // односторонняя дружба
-        userStorage.friendshipRequest(user1Id, user2Id);
+        userStorage.friendshipRequest(usersIds.get(1), usersIds.get(2));
 
-        List<User> user1Friends = userStorage.getRealFriends(user1Id);
-        List<User> user2Friends = userStorage.getRealFriends(user2Id);
+        List<User> user0Friends = userStorage.getRealFriends(usersIds.get(0));
+        List<User> user1Friends = userStorage.getRealFriends(usersIds.get(1));
+        List<User> user2Friends = userStorage.getRealFriends(usersIds.get(2));
 
+        assertThat(user0Friends).asList().isEmpty();
         assertThat(user1Friends).asList().isEmpty();
         assertThat(user2Friends).asList().isEmpty();
 
         // стала двусторонняя дружба
-        userStorage.friendshipRequest(user2Id, user1Id);
+        userStorage.friendshipRequest(usersIds.get(2), usersIds.get(1));
 
-        user1Friends = userStorage.getRealFriends(user1Id);
-        user2Friends = userStorage.getRealFriends(user2Id);
+        user0Friends = userStorage.getRealFriends(usersIds.get(0));
+        user1Friends = userStorage.getRealFriends(usersIds.get(1));
+        user2Friends = userStorage.getRealFriends(usersIds.get(2));
 
-        assertThat(user1Friends).asList().isNotEmpty();
-        assertThat(user2Friends).asList().isNotEmpty();
+        assertThat(user0Friends).asList().isEmpty();
+        assertThat(user1Friends).asList().contains(userStorage.getUserById(usersIds.get(2)).get());
+        assertThat(user2Friends).asList().contains(userStorage.getUserById(usersIds.get(1)).get());
+        assertThat(user1Friends).asList().doesNotContain(userStorage.getUserById(usersIds.get(3)).get());
+        assertThat(user2Friends).asList().doesNotContain(userStorage.getUserById(usersIds.get(3)).get());
 
-        // осталось только односторонняя
-        userStorage.destroyFriendship(user1Id, user2Id);
+        // осталось только односторонняя между 1 и 2
+        userStorage.destroyFriendship(usersIds.get(1), usersIds.get(2));
 
-        user1Friends = userStorage.getRealFriends(user1Id);
-        user2Friends = userStorage.getRealFriends(user2Id);
+        // дополнительно двусторонняя между 0 и 3
+        userStorage.friendshipRequest(usersIds.get(0), usersIds.get(3));
+        userStorage.friendshipRequest(usersIds.get(3), usersIds.get(0));
 
+        user0Friends = userStorage.getRealFriends(usersIds.get(0));
+        user1Friends = userStorage.getRealFriends(usersIds.get(1));
+        user2Friends = userStorage.getRealFriends(usersIds.get(2));
+
+        assertThat(user0Friends).asList().contains(userStorage.getUserById(usersIds.get(3)).get());
         assertThat(user1Friends).asList().isEmpty();
         assertThat(user2Friends).asList().isEmpty();
     }
 
     @Test
     public void testMutualFriends() {
-        User newUser1 = new User();
-        newUser1.setName("Имя");
-        newUser1.setLastName("Фамилия");
-        newUser1.setLogin("userLogin");
-        newUser1.setEmail("user@mail.ru");
-        newUser1.setBirthday(LocalDate.now().minusYears(30));
-
-        User newUser2 = new User();
-        newUser2.setName("ДругоеИмя");
-        newUser2.setLastName("ДругаяФамилия");
-        newUser2.setLogin("User2Login");
-        newUser2.setEmail("user2@mail.ru");
-        newUser2.setBirthday(LocalDate.now().minusYears(40));
-
-        User newUser3 = new User();
-        newUser3.setName("Имя3");
-        newUser3.setLastName("Фамилия3");
-        newUser3.setLogin("user3Login");
-        newUser3.setEmail("user3@mail.ru");
-        newUser3.setBirthday(LocalDate.now().minusYears(30));
-
-        User newUser4 = new User();
-        newUser4.setName("Имя4");
-        newUser4.setLastName("Фамилия4");
-        newUser4.setLogin("user4Login");
-        newUser4.setEmail("user4@mail.ru");
-        newUser4.setBirthday(LocalDate.now().minusYears(30));
-
-        Long user1Id = userStorage.createNewUser(newUser1).getId().get();
-        Long user2Id = userStorage.createNewUser(newUser2).getId().get();
-        Long user3Id = userStorage.createNewUser(newUser3).getId().get();
-        Long user4Id = userStorage.createNewUser(newUser4).getId().get();
+        List<Long> usersIds = makeUsers(6);
 
         // не друзья
-        List<User> usersFriends = userStorage.getMutualFriends(user1Id, user2Id);
+        List<User> usersFriends = userStorage.getMutualFriends(usersIds.get(1), usersIds.get(2));
 
         assertThat(usersFriends).asList().isEmpty();
 
         // односторонняя дружба
-        userStorage.friendshipRequest(user1Id, user3Id);
-        userStorage.friendshipRequest(user2Id, user3Id);
+        userStorage.friendshipRequest(usersIds.get(1), usersIds.get(3));
+        userStorage.friendshipRequest(usersIds.get(2), usersIds.get(3));
+        // посторонняя дружба не должна мешать
+        userStorage.friendshipRequest(usersIds.get(4), usersIds.get(5));
 
-        usersFriends = userStorage.getMutualFriends(user1Id, user2Id);
+        usersFriends = userStorage.getMutualFriends(usersIds.get(1), usersIds.get(2));
 
-        assertThat(usersFriends).asList().isNotEmpty();
+        assertThat(usersFriends).asList().contains(userStorage.getUserById(usersIds.get(3)).get());
+        assertThat(usersFriends).asList().size().isEqualTo(1);
 
         // стала двусторонняя дружба
-        userStorage.friendshipRequest(user3Id, user1Id);
-        userStorage.friendshipRequest(user3Id, user2Id);
+        userStorage.friendshipRequest(usersIds.get(3), usersIds.get(1));
+        userStorage.friendshipRequest(usersIds.get(3), usersIds.get(2));
+        // посторонняя двусторонняя дружба
+        userStorage.friendshipRequest(usersIds.get(5), usersIds.get(4));
 
-        usersFriends = userStorage.getMutualFriends(user1Id, user2Id);
+        usersFriends = userStorage.getMutualFriends(usersIds.get(1), usersIds.get(2));
 
-        assertThat(usersFriends).asList().isNotEmpty();
+        assertThat(usersFriends).asList().contains(userStorage.getUserById(usersIds.get(3)).get());
+        assertThat(usersFriends).asList().size().isEqualTo(1);
 
         // осталось только односторонняя
-        userStorage.destroyFriendship(user3Id, user1Id);
+        userStorage.destroyFriendship(usersIds.get(3), usersIds.get(1));
 
-        usersFriends = userStorage.getMutualFriends(user1Id, user2Id);
+        usersFriends = userStorage.getMutualFriends(usersIds.get(1), usersIds.get(2));
 
-        assertThat(usersFriends).asList().isNotEmpty();
+        assertThat(usersFriends).asList().contains(userStorage.getUserById(usersIds.get(3)).get());
+        assertThat(usersFriends).asList().size().isEqualTo(1);
 
-        // совсем не осталось
-        userStorage.destroyFriendship(user1Id, user3Id);
+        // дружба между общим другом и посторонним человеком не влияет
+        userStorage.friendshipRequest(usersIds.get(3), usersIds.get(5));
 
-        usersFriends = userStorage.getMutualFriends(user1Id, user2Id);
+        usersFriends = userStorage.getMutualFriends(usersIds.get(1), usersIds.get(2));
+
+        assertThat(usersFriends).asList().contains(userStorage.getUserById(usersIds.get(3)).get());
+        assertThat(usersFriends).asList().size().isEqualTo(1);
+
+        // общих совсем не осталось
+        userStorage.destroyFriendship(usersIds.get(1), usersIds.get(3));
+
+        usersFriends = userStorage.getMutualFriends(usersIds.get(1), usersIds.get(2));
 
         assertThat(usersFriends).asList().isEmpty();
+    }
 
+    private List<Long> makeUsers(int count) {
+        List<Long> users = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            User newUser = new User();
+            newUser.setName("Имя" + i);
+            newUser.setLastName("Фамилия" + i);
+            newUser.setLogin("userLogin" + i);
+            newUser.setEmail("user" + i + "@mail.ru");
+            newUser.setBirthday(LocalDate.now().minusYears(30 + i));
+            users.add(userStorage.createNewUser(newUser).getId().get());
+        }
+        return users;
     }
 }
