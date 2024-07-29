@@ -149,11 +149,7 @@ public class FilmService {
 
     // метод для валидации описания фильма
     public static boolean validateFilm(Film film) {
-        // простую валидацию выполняет Jakarta Bean Validation :
-        // film.getName() != null
-        // film.getDuration() > 0
-        // film.length() > MAX_DESCRIPTION_LENGTH
-
+        // простую валидацию выполняет Jakarta Bean Validation, здесь то, для чего нет стандартных аннотаций
         if (film == null || film.getReleaseDate().isBefore(THE_OLDEST_MOVIE)) {
             return false;
         }
