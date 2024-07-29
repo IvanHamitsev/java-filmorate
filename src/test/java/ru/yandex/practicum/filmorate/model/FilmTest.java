@@ -22,26 +22,31 @@ class FilmTest {
 
     @Test
     void validateBadFilm() {
+        // теперь валидация фильма осуществляется с помощью аннотации @Valid
+        // оставил код старых тестов как память
+
         Film film = new Film();
-        // название не указано
         film.setDescription("Description of film");
         film.setReleaseDate(LocalDate.of(2001, 10, 1));
         film.setDuration(90L);
-        assertFalse(FilmService.validateFilm(film), "Bad film name pass validation");
+        // теперь проверька названия - не дело функции validateFilm
+        //assertFalse(FilmService.validateFilm(film), "Bad film name pass validation");
 
         film = new Film();
         film.setName("Film");
         film.setDescription("Description of film more then 200 characters. This film is based on the famous book by Mr. Anderson. According to the description, the film is a complete bull shit. After viewing, this statement is fully confirmed.");
         film.setReleaseDate(LocalDate.of(2001, 10, 1));
         film.setDuration(90L);
-        assertFalse(FilmService.validateFilm(film), "Bad film description pass validation");
+        // теперь проверка длины - не дело функции validateFilm
+        //assertFalse(FilmService.validateFilm(film), "Bad film description pass validation");
 
         film = new Film();
         // название не указано
         film.setDescription("Description of film");
         film.setReleaseDate(LocalDate.of(2001, 10, 1));
         film.setDuration(90L);
-        assertFalse(FilmService.validateFilm(film), "Bad film name pass validation");
+        // теперь проверька названия - не дело функции validateFilm
+        //assertFalse(FilmService.validateFilm(film), "Bad film name pass validation");
 
         film = new Film();
         film.setName("Film");
@@ -55,7 +60,8 @@ class FilmTest {
         film.setDescription("Description of film ");
         film.setReleaseDate(LocalDate.of(2001, 10, 1));
         film.setDuration(0L);
-        assertFalse(FilmService.validateFilm(film), "Bad film releaseDate pass validation");
+        // теперь проверка продолжительности - не дело функции validateFilm
+        //assertFalse(FilmService.validateFilm(film), "Bad film Duration pass validation");
     }
 
     @Test

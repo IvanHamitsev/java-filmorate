@@ -1,16 +1,16 @@
-package ru.yandex.practicum.filmorate.storage.film;
+package ru.yandex.practicum.filmorate.dal;
 
 import ru.yandex.practicum.filmorate.model.Film;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface FilmStorage {
-    Collection<Film> listAllFilms();
+    List<Film> listAllFilms();
 
     boolean filmExists(Long filmId);
 
-    Film getFilmById(Long filmId);
+    Optional<Film> getFilmById(Long filmId);
 
     Film createNewFilm(Film film);
 

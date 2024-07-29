@@ -1,34 +1,36 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import jakarta.validation.Valid;
+import jakarta.validation.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.DataOperationException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
-import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
 @RestController
 @RequestMapping("/films")
+@RequiredArgsConstructor
 public class FilmController {
 
-    private final FilmStorage filmStorage;
     private final FilmService filmService;
 
-    @Autowired
-    public FilmController(FilmStorage filmStorage, FilmService filmService) {
-        this.filmStorage = filmStorage;
-        this.filmService = filmService;
-    }
 
     @GetMapping
     public Collection<Film> listAllFilms() {
-        return filmStorage.listAllFilms();
+        return filmService.listAllFilms();
+    }
+
+    @GetMapping("{filmId}")
+    public Film getFilm(@PathVariable Long filmId) {
+        return filmService.getFilm(filmId);
     }
 
     @GetMapping("/popular")
@@ -41,15 +43,34 @@ public class FilmController {
         }
     }
 
+    @GetMapping("/popular/genre/{genreName}")
+    public Collection<Film> listOfFilmsInGenre(@PathVariable String genreName, @RequestParam(defaultValue = "10") Integer count) {
+        log.trace("Запрос перечня топ-{} фильмов в жанре {}", count, genreName);
+        List<Film> filmsInGenre = filmService.getTopFilmsInGenre(count, genreName);
+        if (filmsInGenre.isEmpty()) {
+            throw new DataOperationException("Не найдено ни одного фильма в жанре " + genreName);
+        } else {
+            return filmsInGenre;
+        }
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Film createNewFilm(@Valid @RequestBody Film film) {
-        return filmStorage.createNewFilm(film);
+    public Film createNewFilm(@RequestBody Film film) {
+        try {
+            return filmService.createNewFilm(film);
+        } catch (ConstraintViolationException e) { // надо заменить стандартное исключение
+            throw new ValidationException("Переданный фильм не соответствует критериям: " + e.getMessage());
+        }
     }
 
     @PutMapping
     public Film updateFilm(@RequestBody Film newFilm) {
-        return filmStorage.updateFilm(newFilm).get();
+        try {
+            return filmService.updateFilm(newFilm);
+        } catch (ConstraintViolationException e) { // надо заменить стандартное исключение
+            throw new ValidationException("Переданный фильм не соответствует критериям: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{id}/like/{userId}")
@@ -58,8 +79,8 @@ public class FilmController {
     }
 
     @DeleteMapping("/{filmId}")
-    public boolean deleteFilm(@PathVariable Long filmId) {
-        return filmStorage.deleteFilm(filmId);
+    public void deleteFilm(@PathVariable Long filmId) {
+        filmService.deleteFilm(filmId);
     }
 
     @DeleteMapping("/{id}/like/{userId}")
